@@ -101,38 +101,27 @@ nbars = int(np.ceil(DUR / BAR))
 for b in range(nbars):
     t0 = b * BAR
     root, tones = CHORDS[b % 4]
-    full = b >= 2
-    # ukulele strum pattern: down on beats, quick up-strums on offbeats
-    for k, off in enumerate([0, 1, 1.5, 2.5, 3, 3.5]):
+    # gentle ukulele: down-strums on 1 and 3, a light up-strum on the "and" of 2 and 4
+    for k, off in enumerate([0, 1.5, 2, 3.5]):
+        up = k % 2 == 1
         st = t0 + off * BEAT
-        for j, m in enumerate(tones if k % 2 == 0 else tones[::-1]):
-            put(pluck(m, 0.45, 0.16 if k % 2 else 0.22), st + j * 0.012, pan=-0.35, gain=0.11 if k % 2 else 0.14)
-    if full:
-        for e in range(8):
-            put(bass(root if e % 4 != 3 else root + 7, BEAT * 0.45), t0 + e * BEAT / 2, gain=0.42 if e % 2 == 0 else 0.3)
-        for q in range(4):
-            if q in (0, 2):
-                put(kick(), t0 + q * BEAT, gain=0.85)
-            else:
-                put(clap(), t0 + q * BEAT, pan=0.1, gain=0.32)
-        for e in range(8):
-            put(hat(open_=(e % 4 == 3)), t0 + e * BEAT / 2 + 0.25 * BEAT * 0, pan=0.4, gain=0.12)
-        for s16 in range(16):
-            put(shaker(), t0 + s16 * BEAT / 4, pan=-0.5, gain=0.05 if s16 % 2 else 0.08)
-    else:
-        for q in (1, 3):
-            put(clap(), t0 + q * BEAT, gain=0.25)
-    # melody enters on bar 3, alternates phrases every 2 bars, rests on the outro
-    if full and b % 2 == 0 and b < nbars - 1:
-        phrase = MEL_A if (b // 2) % 2 == 1 else MEL_B
-        for off, m, ln in phrase:
-            put(marimba(m, max(ln * BEAT, 0.3)), t0 + off * BEAT, pan=0.3, gain=0.24)
-            put(marimba(m + 12, 0.25), t0 + off * BEAT + 0.006, pan=0.3, gain=0.05)
+        for j, m in enumerate(tones[::-1] if up else tones):
+            put(pluck(m, 0.6, 0.15 if up else 0.28), st + j * 0.014, pan=-0.2, gain=0.08 if up else 0.13)
+    if b >= 1:
+        # soft bass on beats 1 and 3, plus a quiet kick to keep the pulse
+        put(bass(root, BEAT * 1.6), t0, gain=0.38)
+        put(bass(root + 7, BEAT * 1.6), t0 + 2 * BEAT, gain=0.3)
+        put(kick(), t0, gain=0.35)
+        put(kick(), t0 + 2 * BEAT, gain=0.25)
+    # a single simple melody line, played on every other phrase so it stays sparse
+    if b >= 2 and b % 4 == 2 and b < nbars - 1:
+        for off, m, ln in MEL_A:
+            put(marimba(m, max(ln * BEAT, 0.35)), t0 + off * BEAT, pan=0.2, gain=0.2)
 
 # simple echo on the whole mix for space
 d = int(SR * BEAT * 0.75)
 for ch in (L, R):
-    ch[d:] += ch[:-d] * 0.18
+    ch[d:] += ch[:-d] * 0.08
 
 # fade in/out, normalize
 t = np.arange(N) / SR
