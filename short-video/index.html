@@ -2,307 +2,691 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>車いじり × Claude</title>
+<title>エブリイ × Claude</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="node_modules/three/build/three.min.js"></script>
 <style>
-  :root {
-    --bg1: #14161c; --bg2: #232733;
-    --accent: #d97757; --accent2: #f2c14e; --ink: #f5f1ea; --mute: #a9a39a;
-  }
+  :root { --bg1: #14161c; --bg2: #262b33; --accent: #d97757; --accent2: #f2c14e; --ink: #f5f1ea; --mute: #a9a39a; --green: #a3ac98; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg1); }
   body { font-family: "Noto Sans JP", "IPAGothic", sans-serif; color: var(--ink); }
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden;
-    background: radial-gradient(circle at 50% 45%, var(--bg2), var(--bg1) 70%); }
+    background: radial-gradient(circle at 50% 50%, var(--bg2), var(--bg1) 72%); }
   .scene { position: absolute; inset: 0; opacity: 0; }
-  .center { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 0 90px; }
-  .head { position: absolute; top: 170px; left: 0; right: 0; text-align: center; }
-  .tag { font-size: 42px; font-weight: 700; color: var(--accent); letter-spacing: .14em; margin-bottom: 18px; }
-  .h1 { font-size: 124px; font-weight: 900; line-height: 1.2; }
-  .h2 { font-size: 100px; font-weight: 900; line-height: 1.2; }
-  .sub { font-size: 50px; font-weight: 500; color: var(--mute); line-height: 1.6; margin-top: 40px; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 80px; }
+  .head { position: absolute; top: 150px; left: 0; right: 0; text-align: center; }
+  .tag { font-size: 40px; font-weight: 700; color: var(--accent); letter-spacing: .14em; margin-bottom: 14px; }
+  .h1 { font-size: 118px; font-weight: 900; line-height: 1.22; }
+  .h2 { font-size: 92px; font-weight: 900; line-height: 1.2; }
+  .sub { font-size: 46px; font-weight: 500; color: var(--mute); line-height: 1.6; margin-top: 36px; }
   .x { color: var(--accent); }
-  canvas.view { position: absolute; top: 470px; left: 0; width: 1080px; height: 1080px; }
-  .pills { position: absolute; top: 1590px; left: 60px; right: 60px; display: flex; flex-wrap: wrap;
-    justify-content: center; gap: 22px; }
-  .pill { font-size: 40px; font-weight: 700; padding: 16px 34px; border-radius: 60px;
-    border: 3px solid rgba(245,241,234,.25); background: rgba(255,255,255,.04); opacity: 0; }
+  canvas.view { position: absolute; top: 440px; left: 0; width: 1080px; height: 1080px; }
+  .pills { position: absolute; top: 1560px; left: 50px; right: 50px; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+  .pill { font-size: 38px; font-weight: 700; padding: 14px 32px; border-radius: 60px;
+    border: 3px solid rgba(245,241,234,.25); background: rgba(255,255,255,.05); opacity: 0; }
   .pill b { color: var(--accent2); }
-  .label3d { position: absolute; font-size: 38px; font-weight: 700; color: var(--accent2);
-    background: rgba(20,22,28,.75); padding: 8px 22px; border-radius: 14px; opacity: 0; white-space: nowrap; }
-  /* seat cover */
-  #seat { position: absolute; top: 470px; left: 140px; width: 800px; height: 800px; }
-  .swatches { position: absolute; top: 1330px; left: 0; right: 0; display: flex; justify-content: center; gap: 36px; }
-  .sw { width: 170px; text-align: center; opacity: .45; transform-origin: 50% 0; }
-  .sw .chip { height: 130px; border-radius: 28px; border: 5px solid transparent; overflow: hidden; display: flex; }
-  .sw .chip span { flex: 1; }
-  .sw .chip span:last-child { flex: .35; }
+  .lb { position: absolute; font-size: 34px; font-weight: 700; color: var(--ink); background: rgba(20,22,28,.82);
+    border: 2px solid rgba(245,241,234,.3); padding: 6px 20px; border-radius: 40px; opacity: 0; white-space: nowrap;
+    transform: translate(-50%, -50%); }
+  .lb.y { color: #1d1d1d; background: var(--accent2); border-color: var(--accent2); }
+  .lb.ok { color: #10261a; background: #8fbf9b; border-color: #8fbf9b; }
+  .lb.bad { color: #fff; background: #d9533a; border-color: #d9533a; }
+  .mode { position: absolute; top: 360px; z-index: 2; left: 0; right: 0; display: flex; justify-content: center; gap: 18px; }
+  .mode div { font-size: 38px; font-weight: 700; padding: 12px 30px; border-radius: 16px; background: rgba(255,255,255,.06);
+    color: var(--mute); border: 3px solid transparent; }
+  .mode div.on { color: var(--ink); border-color: var(--accent); background: rgba(217,119,87,.18); }
+  .swatches { position: absolute; top: 1520px; left: 0; right: 0; display: flex; justify-content: center; gap: 30px; }
+  .sw { width: 310px; text-align: center; opacity: .45; }
+  .sw .chip { height: 96px; border-radius: 24px; border: 5px solid transparent; }
+  .sw.on { opacity: 1; }
   .sw.on .chip { border-color: var(--ink); }
-  .sw .nm { font-size: 30px; font-weight: 700; margin-top: 14px; line-height: 1.3; }
-  #palName { position: absolute; top: 1660px; left: 0; right: 0; text-align: center;
-    font-size: 58px; font-weight: 900; }
+  .sw .nm { font-size: 36px; font-weight: 900; margin-top: 12px; }
+  .sw .pr { white-space: nowrap; font-size: 21px; font-weight: 500; color: var(--mute); margin-top: 4px; line-height: 1.4; }
   .bar { position: absolute; left: 0; bottom: 0; height: 14px; background: var(--accent); }
-  .chips { display: flex; gap: 18px; margin-top: 70px; }
-  .chips div { white-space: nowrap; font-size: 36px; font-weight: 700; padding: 18px 34px; border-radius: 60px; background: rgba(217,119,87,.16); color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin-top: 64px; }
+  .chips div { white-space: nowrap; font-size: 36px; font-weight: 700; padding: 16px 30px; border-radius: 60px; background: rgba(217,119,87,.16); }
 </style>
 </head>
 <body>
 <div id="stage">
 
-  <!-- 0: hook -->
   <section class="scene center" id="s0">
-    <div class="tag">MY CAR PROJECTS</div>
-    <div class="h1">Claudeと<br>つくってる、<br><span class="x">うちのクルマ。</span></div>
+    <div class="tag">EVERY DA17W × CLAUDE</div>
+    <div class="h1">Claudeと<br>つくってる、<br><span class="x">うちのエブリイ。</span></div>
+    <div class="sub">車中泊カスタムの全部を、<br>3Dモデルで考えてます。</div>
   </section>
 
-  <!-- 1: bed kit model -->
   <section class="scene" id="s1">
-    <div class="head"><div class="tag">01 / BED KIT</div><div class="h2">ベッドキット</div></div>
-    <canvas class="view" id="cvBed" width="1080" height="1080"></canvas>
-    <div class="label3d" id="lbBed1">1,800 × 1,200 mm</div>
-    <div class="label3d" id="lbBed2">下は収納スペース</div>
+    <div class="head"><div class="tag">STEP 0 / MODEL</div><div class="h2">まずは車ごと3Dに</div></div>
+    <canvas class="view" id="cvCar" width="1080" height="1080"></canvas>
+    <div class="lb" id="lbCar1">エブリイワゴン DA17W・標準ルーフ</div>
+    <div class="lb y" id="lbCar2">屋根と左側を外して車内へ</div>
     <div class="pills">
-      <div class="pill">3Dモデルで<b>組み上がり</b>を確認</div>
-      <div class="pill">板は<b>3分割</b>で取り外し</div>
+      <div class="pill">ボディ色は<b>シーダーグリーン</b></div>
+      <div class="pill">全長3,395・全高1,815mmで再現</div>
     </div>
   </section>
 
-  <!-- 2: rod holder model -->
   <section class="scene" id="s2">
-    <div class="head"><div class="tag">02 / ROD HOLDER</div><div class="h2">ロッドホルダー</div></div>
-    <canvas class="view" id="cvRod" width="1080" height="1080"></canvas>
-    <div class="label3d" id="lbRod1">天井に竿を5本</div>
+    <div class="head"><div class="tag">01 / BED KIT</div><div class="h2">伸縮式ベッド</div></div>
+    <div class="mode"><div id="mShort">運転：縮める</div><div id="mExt">就寝：伸ばす</div></div>
+    <canvas class="view" id="cvBed" width="1080" height="1080"></canvas>
+    <div class="lb y" id="lbLen">750 mm</div>
+    <div class="lb" id="lbS1">フィッツケース×2</div>
+    <div class="lb" id="lbS4">トランクカーゴ</div>
+    <div class="lb" id="lbS5">防水ブーツ</div>
     <div class="pills">
-      <div class="pill">車内の<b>天井スペース</b>を活用</div>
-      <div class="pill">取り付け位置を<b>モデルで検討</b></div>
+      <div class="pill">イレクターの前フレームが<b>スライド</b></div>
+      <div class="pill">ベッド下は<b>まるごと収納</b></div>
     </div>
   </section>
 
-  <!-- 3: seat cover color study -->
   <section class="scene" id="s3">
-    <div class="head"><div class="tag">03 / SEAT COVER</div><div class="h2">シートカバー</div></div>
-    <svg id="seat" viewBox="0 0 1080 1080">
-      <defs>
-        <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#000" stop-opacity=".35"/>
-          <stop offset=".5" stop-color="#000" stop-opacity="0"/>
-          <stop offset="1" stop-color="#000" stop-opacity=".35"/>
-        </linearGradient>
-      </defs>
-      <rect x="470" y="190" width="22" height="70" fill="#777"/>
-      <rect x="588" y="190" width="22" height="70" fill="#777"/>
-      <rect class="cBase" x="400" y="50" width="280" height="160" rx="60"/>
-      <rect class="cMain" x="440" y="80" width="200" height="100" rx="40"/>
-      <path class="cBase" d="M290 250 Q540 215 790 250 L815 820 Q540 855 265 820 Z"/>
-      <path class="cMain" d="M385 280 Q540 262 695 280 L708 795 Q540 815 372 795 Z"/>
-      <path class="cStitch" fill="none" stroke-width="7" stroke-dasharray="18 12" d="M385 280 Q540 262 695 280 L708 795 Q540 815 372 795 Z"/>
-      <path class="cStitch" fill="none" stroke-width="6" stroke-dasharray="16 12" d="M378 450 Q540 435 700 450 M376 620 Q540 605 704 620"/>
-      <path class="cBase" d="M230 855 Q540 820 850 855 L880 1010 Q540 1055 200 1010 Z"/>
-      <path class="cMain" d="M335 870 Q540 850 745 870 L762 985 Q540 1012 318 985 Z"/>
-      <path class="cStitch" fill="none" stroke-width="7" stroke-dasharray="18 12" d="M335 870 Q540 850 745 870 L762 985 Q540 1012 318 985 Z"/>
-      <path fill="url(#shade)" d="M290 250 Q540 215 790 250 L815 820 Q540 855 265 820 Z"/>
-      <path fill="url(#shade)" d="M230 855 Q540 820 850 855 L880 1010 Q540 1055 200 1010 Z"/>
-    </svg>
-    <div class="swatches" id="swatches"></div>
-    <div id="palName"></div>
+    <div class="head"><div class="tag">02 / ROD HOLDER</div><div class="h2">天井ロッドホルダー</div></div>
+    <div class="mode"><div id="mA2">下（U-A2）</div><div id="mA21">上（U-A21）</div><div id="mAlt">交互</div></div>
+    <canvas class="view" id="cvRod" width="1080" height="1080"></canvas>
+    <div class="lb" id="lbP0">170cm</div>
+    <div class="lb" id="lbP1">156cm</div>
+    <div class="lb y" id="lbRods">ロッド6本</div>
+    <div class="pills">
+      <div class="pill">付け方3案を<b>切り替えて比較</b></div>
+      <div class="pill">座ったとき<b>頭が当たるか</b>判定</div>
+    </div>
   </section>
 
-  <!-- 4: outro -->
-  <section class="scene center" id="s4">
-    <div class="h2">ぜんぶ、<br><span class="x">Claude</span>と<br>考えて形にした。</div>
-    <div class="chips"><div>ベッドキット</div><div>ロッドホルダー</div><div>シートカバー</div></div>
-    <div class="sub">次は何つくろう？</div>
+  <section class="scene" id="s4">
+    <div class="head"><div class="tag">03 / SEAT COVER &amp; COLOR</div><div class="h2">合皮の色えらび</div></div>
+    <canvas class="view" id="cvCol" width="1080" height="1080"></canvas>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <section class="scene center" id="s5">
+    <div class="h2">考えて、<br>3Dで確かめて、<br><span class="x">つくる。</span></div>
+    <div class="chips"><div>伸縮ベッド</div><div>床下収納</div><div>ロッドホルダー</div><div>シートカバー</div></div>
+    <div class="sub">相棒は Claude。</div>
   </section>
 
   <div class="bar" id="bar"></div>
 </div>
 
 <script>
-  const SCENES = [[0, 2.6], [2.6, 8.6], [8.6, 14.1], [14.1, 20.1], [20.1, 24.5]];
-  const DURATION = 24.5;
-  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-  const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
-  const easeBack = (x) => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const SCENES = [[0, 2.8], [2.8, 9.0], [9.0, 16.5], [16.5, 24.0], [24.0, 30.5], [30.5, 34]];
+const DURATION = 34;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+const smooth = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
 
-  // ---------- shared three.js helpers (1 unit = 100 mm) ----------
-  function makeView(canvas) {
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setSize(1080, 1080, false);
-    renderer.shadowMap.enabled = true;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
-    scene.add(new THREE.HemisphereLight(0xfff4e6, 0x30343f, 0.9));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(10, 22, 14);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16 });
-    scene.add(sun);
-    return { renderer, scene, camera };
+function makeRenderer(id) {
+  const r = new THREE.WebGLRenderer({ canvas: document.getElementById(id), antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setPixelRatio(1); r.setSize(1080, 1080, false); r.setClearColor(0x000000, 0);
+  return r;
+}
+function label(id, vec, camera, o, cls) {
+  const el = document.getElementById(id);
+  const p = vec.clone().project(camera);
+  el.style.left = ((p.x + 1) / 2 * 1080) + 'px';
+  el.style.top = ((1 - p.y) / 2 * 1080 + 440) + 'px';
+  el.style.opacity = o;
+  if (cls !== undefined) el.className = 'lb ' + cls;
+}
+function disposeGroup(g) {
+  g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => m.dispose()); });
+}
+
+/* =====================================================================
+   エブリイ車中泊ベッド配色 model (car + bed + seat covers), ported as-is
+   ===================================================================== */
+const SCHEMES = {
+  camel:  { name: 'キャメル',     hex: '#A9703A', mottle: 0.10, bed: '布百選 ST-05',       seat: 'grace アンティークキャメル' },
+  dcamel: { name: '濃いキャメル', hex: '#8B5328', mottle: 0.07, bed: '布百選 MASTER-X-115', seat: 'Bellezza ヴィンテージ キャメル' },
+  dbrown: { name: 'ダークブラウン', hex: '#4B3022', mottle: 0.05, bed: '布百選 MASTER-X-119', seat: 'grace アンティークブラウン' },
+};
+
+function buildEvery(scene) {
+  let current = 'camel';
+  const leatherMats = {}, grooveMats = {}, leatherMeshes = [], grooveMeshes = [], groups = {};
+
+  function leatherTexture(hex, mottle) {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d'); g.fillStyle = hex; g.fillRect(0, 0, 256, 256);
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 140; i++) {
+      const x = rnd() * 256, y = rnd() * 256, r = 8 + rnd() * 22, light = rnd() > 0.5;
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      const a = mottle * (0.4 + rnd() * 0.6);
+      grd.addColorStop(0, light ? `rgba(255,235,205,${a})` : `rgba(30,15,5,${a})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+    }
+    for (let i = 0; i < 5000; i++) { g.fillStyle = `rgba(0,0,0,${0.05 * rnd()})`; g.fillRect(rnd() * 256, rnd() * 256, 1.2, 1.2); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
   }
-  const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0.05, ...o });
-  function box(w, h, d, m) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    mesh.castShadow = mesh.receiveShadow = true;
-    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),
-      new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }));
-    mesh.add(edges);
-    return mesh;
+  function roundedRectShape(w, h, rad) {
+    const s = new THREE.Shape(), x = -w / 2, y = -h / 2; rad = Math.min(rad, w / 2, h / 2);
+    s.moveTo(x + rad, y); s.lineTo(x + w - rad, y); s.quadraticCurveTo(x + w, y, x + w, y + rad);
+    s.lineTo(x + w, y + h - rad); s.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+    s.lineTo(x + rad, y + h); s.quadraticCurveTo(x, y + h, x, y + h - rad);
+    s.lineTo(x, y + rad); s.quadraticCurveTo(x, y, x + rad, y); return s;
   }
-  function vanShell(scene, L, W, H) {
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W), mat(0x2b2f3a));
-    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-    const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(L, H, W));
-    const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xa9a39a, transparent: true, opacity: 0.45 }));
-    lines.position.y = H / 2; scene.add(lines);
+  function softBox(w, h, d, r) {
+    r = Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001);
+    const geo = new THREE.ExtrudeGeometry(roundedRectShape(w - 2 * r, h - 2 * r, r * 0.6),
+      { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 6 });
+    geo.center(); return geo;
   }
-  function project(v, camera) {
-    const p = v.clone().project(camera);
-    return { x: (p.x + 1) / 2 * 1080, y: (1 - p.y) / 2 * 1080 + 470 };
+  function panelGeo(lx, wz, t, chamfer) {
+    const r = 0.009, x0 = -lx / 2 + r, x1 = lx / 2 - r, z0 = -wz / 2 + r, z1 = wz / 2 - r, c = 0.07;
+    const s = new THREE.Shape();
+    s.moveTo(x0, z0);
+    if (chamfer === 'neg') { s.lineTo(x1 - c, z0); s.lineTo(x1, z0 + c); } else s.lineTo(x1, z0);
+    if (chamfer === 'pos') { s.lineTo(x1, z1 - c); s.lineTo(x1 - c, z1); } else s.lineTo(x1, z1);
+    s.lineTo(x0, z1); s.lineTo(x0, z0);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: t - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3 });
+    geo.rotateX(Math.PI / 2); geo.center(); return geo;
+  }
+  function add(parent, geo, mat, x, y, z, opts = {}) {
+    if (!mat) mat = opts.groove ? grooveMats[current] : leatherMats[current];
+    const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z);
+    m.castShadow = opts.cast !== false; m.receiveShadow = true;
+    if (opts.rx) m.rotation.x = opts.rx; if (opts.ry) m.rotation.y = opts.ry; if (opts.rz) m.rotation.z = opts.rz;
+    parent.add(m);
+    if (opts.leather) leatherMeshes.push(m); if (opts.groove) grooveMeshes.push(m);
+    return m;
+  }
+  function boxMM(parent, mat, x0, x1, y0, y1, z0, z1, opts) {
+    [x0, x1] = [Math.min(x0, x1), Math.max(x0, x1)]; [y0, y1] = [Math.min(y0, y1), Math.max(y0, y1)]; [z0, z1] = [Math.min(z0, z1), Math.max(z0, z1)];
+    return add(parent, new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, opts);
   }
 
-  // ---------- bed kit ----------
-  const bed = makeView(document.getElementById('cvBed'));
-  vanShell(bed.scene, 18, 12, 11);
-  const wood = mat(0xd9ae7e), woodDark = mat(0x9c7148);
-  const legs = [], panels = [], bins = [];
-  for (const x of [-8.2, 0, 8.2]) for (const z of [-5.4, 5.4]) {
-    const l = box(0.5, 3.6, 0.5, woodDark); l.position.set(x, 1.8, z); bed.scene.add(l); legs.push(l);
-  }
-  const rails = [-5.4, 5.4].map(z => { const r = box(17.4, 0.4, 0.6, woodDark); r.position.set(0, 3.8, z); bed.scene.add(r); return r; });
-  for (const x of [-5.9, 0, 5.9]) {
-    const p = box(5.8, 0.24, 11.8, wood); p.position.set(x, 4.12, 0); bed.scene.add(p); panels.push(p);
-  }
-  [[0x6e7356, -5.5], [0x3c4a63, 0], [0x8a5a44, 5.5]].forEach(([c, x]) => {
-    const b = box(4.6, 2.8, 4.8, mat(c)); b.position.set(x, 1.4, 2.6); bed.scene.add(b); bins.push(b);
+  scene.add(new THREE.HemisphereLight(0xf4f2ea, 0x45463f, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+  sun.position.set(3.5, 7, -5); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
+  sun.shadow.bias = -0.0008; scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xfff3e0, 0.35); fill.position.set(-4, 3, 5); scene.add(fill);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.35 }));
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+  Object.entries(SCHEMES).forEach(([k, s]) => {
+    leatherMats[k] = new THREE.MeshStandardMaterial({ map: leatherTexture(s.hex, s.mottle), roughness: 0.62, metalness: 0 });
+    const dark = new THREE.Color(s.hex).convertSRGBToLinear().multiplyScalar(0.45);
+    grooveMats[k] = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.8 });
   });
 
-  function renderBed(local) {
-    legs.forEach((l, i) => { const p = ease((local - 0.2 - i * 0.06) / 0.5); l.scale.y = Math.max(p, 0.001); l.position.y = 1.8 * p; });
-    rails.forEach((r, i) => { const p = easeBack((local - 0.8 - i * 0.12) / 0.5); r.position.y = 3.8 + (1 - p) * 6; r.visible = local > 0.8; });
-    panels.forEach((pn, i) => { const p = easeBack((local - 1.4 - i * 0.3) / 0.55); pn.position.y = 4.12 + (1 - p) * 8; pn.visible = local > 1.4 + i * 0.3; });
-    bins.forEach((b, i) => { const p = ease((local - 2.6 - i * 0.25) / 0.6); b.position.z = 2.6 + (1 - p) * 14; b.visible = local > 2.6 + i * 0.25; });
-    const a = 0.9 + local * 0.22;
-    bed.camera.position.set(Math.cos(a) * 33, 19, Math.sin(a) * 33);
-    bed.camera.lookAt(0, 2.6, 0);
-    bed.renderer.render(bed.scene, bed.camera);
-    place('lbBed1', project(new THREE.Vector3(0, 4.6, -6), bed.camera), ease((local - 2.2) / 0.4));
-    place('lbBed2', project(new THREE.Vector3(0, 1.5, 7.5), bed.camera), ease((local - 3.6) / 0.4));
+  const M = (c, o = {}) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.5, metalness: 0.05 }, o)); m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); return m; };
+  const paint = M(0xa3ac98, { roughness: 0.38, metalness: 0.1 });
+  const black = M(0x161716, { roughness: 0.8 });
+  const gloss = M(0x0c0c0d, { roughness: 0.22, metalness: 0.15 });
+  const glass = M(0x20272b, { roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.6 });
+  const carpet = M(0xd3c8b5, { roughness: 0.95 });
+  const trim = M(0xd0c6b6, { roughness: 0.85 });
+  const trimDark = M(0x8d8377, { roughness: 0.85 });
+  const dashM = M(0xbdb5a8, { roughness: 0.8 });
+  const dashTop = M(0x5b5751, { roughness: 0.85 });
+  const seatBase = M(0x8f8378, { roughness: 0.9 });
+  const pipeM = M(0xebe7dd, { roughness: 0.45 });
+  const joint = M(0x55585a, { roughness: 0.5 });
+  const lamp = M(0xe8ecee, { roughness: 0.12, metalness: 0.5, emissive: 0x1a1a1a });
+  const tail = M(0xb3231c, { roughness: 0.3 });
+  const tailW = M(0xe8e8e8, { roughness: 0.2, metalness: 0.3 });
+  const silver = M(0x9da0a2, { roughness: 0.35, metalness: 0.6 });
+
+  const car = new THREE.Group(); scene.add(car);
+  ['left', 'right', 'roof', 'body', 'interior', 'bed', 'store'].forEach(k => { groups[k] = new THREE.Group(); car.add(groups[k]); });
+
+  const Wh = 0.7375, r = 0.33, XF = 1.70, XR = -1.695;
+  function sideShape() {
+    const s = new THREE.Shape(); const d = Math.asin(0.05 / r);
+    s.moveTo(XR, 0.33);
+    s.lineTo(-1.23 - r * Math.cos(d), 0.33); s.absarc(-1.23, 0.28, r, Math.PI - d, d, true);
+    s.lineTo(1.20 - r * Math.cos(d), 0.33); s.absarc(1.20, 0.28, r, Math.PI - d, d, true);
+    s.lineTo(XF, 0.33); s.lineTo(XF, 0.98); s.lineTo(1.62, 1.10); s.lineTo(1.30, 1.79);
+    s.quadraticCurveTo(1.27, 1.815, 1.20, 1.815); s.lineTo(XR + 0.04, 1.815); s.quadraticCurveTo(XR, 1.815, XR, 1.77); s.lineTo(XR, 0.33);
+    return s;
   }
-
-  // ---------- rod holder ----------
-  const rod = makeView(document.getElementById('cvRod'));
-  vanShell(rod.scene, 18, 12, 11);
-  const seatM = mat(0x3a3f4d);
-  [-3, 3].forEach(z => {
-    const s = box(3.6, 1, 3.8, seatM); s.position.set(-6.5, 2.4, z); rod.scene.add(s);
-    const bk = box(0.9, 3.6, 3.8, seatM); bk.position.set(-8.2, 4.4, z); rod.scene.add(bk);
-  });
-  const barM = mat(0xd97757, { metalness: 0.4, roughness: 0.4 });
-  const bars = [-4.5, 4.5].map(x => {
-    const g = new THREE.Group();
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 11.2, 20), barM);
-    c.rotation.x = Math.PI / 2; c.castShadow = true; g.add(c);
-    [-5.4, 5.4].forEach(z => { const h = box(0.4, 1.2, 0.4, mat(0x555a66)); h.position.set(0, 0.6, z); g.add(h); });
-    g.position.set(x, 9.6, 0); rod.scene.add(g); return g;
-  });
-  const rodColors = [0xf2c14e, 0xf5f1ea, 0x5fa8d3, 0xe85d5d, 0x8fd18b];
-  const rods = rodColors.map((c, i) => {
-    const g = new THREE.Group();
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 17, 12), mat(c, { roughness: 0.35 }));
-    r.rotation.z = Math.PI / 2; r.castShadow = true; g.add(r);
-    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 2.4, 12), mat(0x222222));
-    grip.rotation.z = Math.PI / 2; grip.position.x = -6.5; g.add(grip);
-    const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.5, 20), mat(0x9aa0a6, { metalness: 0.6, roughness: 0.3 }));
-    reel.position.set(-5.6, -0.45, 0); g.add(reel);
-    g.position.set(0, 9.85, -3.6 + i * 1.8); rod.scene.add(g); return g;
-  });
-
-  function renderRod(local) {
-    bars.forEach((b, i) => { const p = easeBack((local - 0.2 - i * 0.2) / 0.5); b.position.y = 9.6 - (1 - p) * 5; b.visible = local > 0.2 + i * 0.2; });
-    rods.forEach((r, i) => { const p = ease((local - 1.0 - i * 0.35) / 0.7); r.position.x = (1 - p) * 26; r.visible = local > 1.0 + i * 0.35; });
-    const a = 0.75 + local * 0.14;
-    rod.camera.position.set(Math.cos(a) * 30, 16 - local * 0.5, Math.sin(a) * 30);
-    rod.camera.lookAt(0, 6.5, 0);
-    rod.renderer.render(rod.scene, rod.camera);
-    place('lbRod1', project(new THREE.Vector3(2, 11.6, 0), rod.camera), ease((local - 3.0) / 0.4));
+  function pane(g, x0, x1, y0, y1, zc, sg) {
+    boxMM(g, black, x0 - 0.025, x1 + 0.025, y0 - 0.025, y1 + 0.025, zc - 0.003, zc + 0.003, { cast: false });
+    boxMM(g, glass, x0, x1, y0, y1, zc + sg * 0.003, zc + sg * 0.007, { cast: false });
   }
-
-  function place(id, pos, o) {
-    const el = document.getElementById(id);
-    el.style.opacity = o;
-    el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
-    el.style.transform = `translate(-50%, -50%) scale(${0.85 + 0.15 * o})`;
-  }
-
-  // ---------- seat cover palettes ----------
-  const PALETTES = [
-    { name: 'ブラック × レッドステッチ', base: '#1d1e22', main: '#34353b', stitch: '#e0483e' },
-    { name: 'キャメル × ブラウン', base: '#5a3c27', main: '#c08a5a', stitch: '#f3dfbf' },
-    { name: 'カーキ × ブラック', base: '#26271f', main: '#6e7356', stitch: '#e8d9a6' },
-    { name: 'デニム × ホワイト', base: '#22314b', main: '#4a6a96', stitch: '#f5f1ea' },
-  ];
-  const swWrap = document.getElementById('swatches');
-  PALETTES.forEach(p => {
-    const d = document.createElement('div'); d.className = 'sw';
-    d.innerHTML = `<div class="chip"><span style="background:${p.main}"></span><span style="background:${p.base}"></span><span style="background:${p.stitch}"></span></div><div class="nm">${p.name.replace(' × ', '<br>× ')}</div>`;
-    swWrap.appendChild(d);
+  [['left', -1], ['right', 1]].forEach(([k, sg]) => {
+    const g = new THREE.ExtrudeGeometry(sideShape(), { depth: 0.03, bevelEnabled: false, curveSegments: 20 });
+    add(groups[k], g, paint, 0, 0, sg > 0 ? Wh - 0.03 : -Wh);
+    const zG = sg * (Wh + 0.004);
+    pane(groups[k], -1.60, -0.86, 1.12, 1.66, zG, sg);
+    pane(groups[k], -0.70, 0.26, 1.12, 1.66, zG, sg);
+    pane(groups[k], 0.38, 1.22, 1.12, 1.64, zG, sg);
+    boxMM(groups[k], black, 0.29, 0.35, 1.10, 1.70, zG - 0.003, zG + 0.004, { cast: false });
+    boxMM(groups[k], black, -0.79, -0.77, 1.10, 1.70, zG - 0.003, zG + 0.004, { cast: false });
+    [0.355, -0.735].forEach(x => boxMM(groups[k], black, x - 0.003, x + 0.003, 0.40, 1.10, zG - 0.002, zG + 0.002, { cast: false }));
+    boxMM(groups[k], black, -1.69, -0.80, 0.86, 0.875, zG - 0.002, zG + 0.003, { cast: false });
+    boxMM(groups[k], silver, -0.72, 0.34, 0.33, 0.37, sg * Wh - 0.01, sg * (Wh + 0.02));
+    boxMM(groups[k], black, -0.02, 0.12, 0.86, 0.89, zG, zG + sg * 0.02);
+    boxMM(groups[k], black, 0.95, 1.05, 0.86, 0.89, zG, zG + sg * 0.02);
+    boxMM(groups[k], black, 1.20, 1.33, 1.08, 1.26, sg * (Wh + 0.02), sg * (Wh + 0.15));
+    boxMM(groups[k], black, 1.30, 1.34, 1.10, 1.14, sg * (Wh), sg * (Wh + 0.04));
   });
-  const hex = (h) => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
-  const mix = (a, b, k) => 'rgb(' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * k)).join(',') + ')';
+  boxMM(groups.roof, paint, XR, 1.22, 1.785, 1.815, -Wh, Wh);
+  boxMM(groups.roof, paint, 1.18, 1.30, 1.76, 1.80, -Wh, Wh);
+  boxMM(groups.body, paint, 1.62, 1.715, 0.95, 1.10, -Wh, Wh);
+  const wsL = Math.hypot(0.32, 0.69);
+  add(groups.body, new THREE.BoxGeometry(0.012, wsL, Wh * 2 - 0.09), glass, 1.46, 1.445, 0, { rz: Math.atan2(0.32, 0.69), cast: false });
+  add(groups.body, new THREE.BoxGeometry(0.02, wsL + 0.04, Wh * 2 - 0.02), black, 1.455, 1.445, 0, { rz: Math.atan2(0.32, 0.69), cast: false });
+  boxMM(groups.body, black, 1.69, 1.73, 0.70, 0.95, -0.47, 0.47);
+  [0.77, 0.83, 0.89].forEach(y => boxMM(groups.body, gloss, 1.73, 1.738, y - 0.012, y + 0.012, -0.45, 0.45, { cast: false }));
+  [-1, 1].forEach(sg => {
+    boxMM(groups.body, lamp, 1.68, 1.725, 0.72, 0.97, sg * 0.48 - (sg > 0 ? 0 : 0.25), sg * 0.48 + (sg > 0 ? 0.25 : 0));
+    boxMM(groups.body, black, 1.68, 1.74, 0.30, 0.70, sg > 0 ? 0.47 : -Wh - 0.01, sg > 0 ? Wh + 0.01 : -0.47);
+  });
+  boxMM(groups.body, black, 1.66, 1.78, 0.30, 0.70, -0.47, 0.47);
+  [-0.28, -0.18, 0.18, 0.28].forEach(z => boxMM(groups.body, gloss, 1.78, 1.785, 0.44, 0.62, z - 0.004, z + 0.004, { cast: false }));
+  boxMM(groups.body, M(0x7b7f80, { metalness: 0.6, roughness: 0.3 }), 1.78, 1.784, 0.40, 0.66, -0.13, 0.13, { cast: false });
+  boxMM(groups.body, paint, -1.715, -1.685, 0.58, 1.815, -Wh, Wh);
+  boxMM(groups.body, glass, -1.722, -1.715, 1.16, 1.72, -0.62, 0.62, { cast: false });
+  boxMM(groups.body, black, -1.725, -1.70, 0.97, 0.99, -0.06, 0.06);
+  boxMM(groups.body, tail, -1.70, -1.66, 1.74, 1.77, -0.14, 0.14);
+  boxMM(groups.body, black, -1.775, -1.64, 0.28, 0.60, -Wh - 0.01, Wh + 0.01);
+  [-1, 1].forEach(sg => {
+    boxMM(groups.body, tail, -1.782, -1.775, 0.48, 0.56, sg * 0.38, sg * 0.70);
+    boxMM(groups.body, tailW, -1.783, -1.776, 0.48, 0.56, sg * 0.38, sg * 0.48);
+  });
+  const tire = new THREE.CylinderGeometry(0.29, 0.29, 0.18, 40);
+  const rimGeo = new THREE.CylinderGeometry(0.175, 0.175, 0.03, 32);
+  const spoke = new THREE.BoxGeometry(0.03, 0.16, 0.012);
+  const letter = new THREE.TorusGeometry(0.235, 0.006, 6, 40, Math.PI * 0.55);
+  const lettM = M(0x8cc6dc, { roughness: 0.5 });
+  const wheels = [];
+  [[1.20, 1], [1.20, -1], [-1.23, 1], [-1.23, -1]].forEach(([x, sg]) => {
+    const w = new THREE.Group(); w.position.set(x, 0.29, sg * 0.63); groups.body.add(w); wheels.push(w);
+    add(w, tire, black, 0, 0, 0, { rx: Math.PI / 2 });
+    add(w, rimGeo, gloss, 0, 0, sg * 0.085, { rx: Math.PI / 2 });
+    for (let i = 0; i < 6; i++) { const s = add(w, spoke, gloss, 0, 0, sg * 0.093); s.rotation.z = i * Math.PI / 3; s.position.x = Math.sin(-i * Math.PI / 3) * 0.085; s.position.y = Math.cos(i * Math.PI / 3) * 0.085; }
+    add(w, new THREE.CylinderGeometry(0.04, 0.04, 0.03, 16), gloss, 0, 0, sg * 0.1, { rx: Math.PI / 2 });
+    const l1 = add(w, letter, lettM, 0, 0, sg * 0.091, { cast: false }); l1.rotation.z = 0.4;
+    const l2 = add(w, letter, lettM, 0, 0, sg * 0.091, { cast: false }); l2.rotation.z = 0.4 + Math.PI;
+  });
 
-  function renderSeat(local) {
-    const step = 1.35, idx = clamp(Math.floor((local - 0.5) / step), 0, PALETTES.length - 1);
-    const k = idx === 0 ? 1 : ease((local - 0.5 - idx * step) / 0.35);
-    const cur = PALETTES[idx], prev = PALETTES[Math.max(0, idx - 1)];
-    const paint = (cls, key) => document.querySelectorAll('.' + cls).forEach(e => {
-      const c = mix(prev[key], cur[key], k);
-      e.setAttribute(cls === 'cStitch' ? 'stroke' : 'fill', c);
+  const I = groups.interior;
+  boxMM(I, carpet, -1.685, 1.40, 0.60, 0.62, -Wh + 0.03, Wh - 0.03);
+  boxMM(I, trim, -1.685, 0.36, 0.62, 1.10, Wh - 0.07, Wh - 0.03);
+  boxMM(groups.left, trim, -1.685, 0.36, 0.62, 1.10, -Wh + 0.03, -Wh + 0.07);
+  [-1.45, -1.10].forEach(x => boxMM(I, trimDark, x - 0.13, x + 0.13, 0.74, 0.80, Wh - 0.10, Wh - 0.07));
+  boxMM(groups.roof, trim, -1.685, 1.20, 1.75, 1.785, -Wh + 0.03, Wh - 0.03, { cast: false });
+  boxMM(I, dashM, 1.25, 1.64, 0.88, 1.12, -Wh + 0.03, Wh - 0.03);
+  boxMM(I, dashTop, 1.30, 1.60, 1.12, 1.16, -Wh + 0.03, Wh - 0.03);
+  boxMM(I, dashM, 1.12, 1.32, 0.62, 0.98, -0.13, 0.13);
+  boxMM(I, dashTop, 1.33, 1.35, 1.00, 1.12, 0.03, 0.22);
+  const wheel = add(I, new THREE.TorusGeometry(0.18, 0.02, 10, 40), dashTop, 1.13, 1.20, 0.33);
+  wheel.rotation.set(0, Math.PI / 2, 0); wheel.rotateX(-0.5);
+  boxMM(I, dashTop, 1.13, 1.30, 1.10, 1.15, 0.31, 0.35);
+
+  [-0.33, 0.33].forEach(z => {
+    boxMM(I, seatBase, 0.62, 1.00, 0.62, 0.84, z - 0.19, z + 0.19);
+    add(I, softBox(0.50, 0.13, 0.49, 0.045), null, 0.80, 0.905, z, { leather: true });
+    [-0.09, 0.09].forEach(dz => add(I, new THREE.BoxGeometry(0.42, 0.006, 0.008), null, 0.80, 0.972, z + dz, { groove: true, cast: false }));
+    const back = new THREE.Group(); back.position.set(0.57, 0.93, z); back.rotation.z = 0.2; I.add(back);
+    add(back, softBox(0.14, 0.56, 0.49, 0.05), null, 0, 0.28, 0, { leather: true });
+    [-0.09, 0.09].forEach(dz => add(back, new THREE.BoxGeometry(0.008, 0.48, 0.008), null, 0.071, 0.28, dz, { groove: true, cast: false }));
+    [-0.07, 0.07].forEach(dz => add(back, new THREE.CylinderGeometry(0.006, 0.006, 0.07, 8), silver, 0, 0.59, dz));
+    add(back, softBox(0.11, 0.18, 0.28, 0.045), null, 0, 0.70, 0, { leather: true });
+    if (z > 0) add(back, softBox(0.30, 0.07, 0.07, 0.025), null, 0.16, 0.20, -0.27, { leather: true });
+  });
+
+  const L = new THREE.Group(); I.add(L);
+  boxMM(L, M(0xe9e7e1, { roughness: 0.5 }), -0.02, 0.40, 0.62, 0.86, -0.58, -0.12);
+  boxMM(L, M(0x3f6f8f, { roughness: 0.5 }), -0.02, 0.40, 0.86, 0.89, -0.58, -0.12);
+  add(L, softBox(0.40, 0.22, 0.36, 0.08), M(0x4a4f45, { roughness: 0.9 }), 0.19, 0.73, 0.30);
+
+  const B = groups.bed, floor = 0.62, top = 0.935, pr = 0.0145;
+  const xs = [-1.60, -0.94, -0.60, 0.17], zs = [-0.57, 0, 0.57];
+  const vPipe = new THREE.CylinderGeometry(pr, pr, top - floor - 0.02, 12);
+  xs.forEach(x => zs.forEach(z => {
+    if (z === 0 && x !== -0.94 && x !== -0.60) return;
+    add(B, vPipe, pipeM, x, (top + floor + 0.02) / 2, z);
+    add(B, new THREE.CylinderGeometry(0.028, 0.032, 0.02, 16), joint, x, floor + 0.01, z);
+  }));
+  zs.forEach(z => add(B, new THREE.CylinderGeometry(pr, pr, 1.77, 12), pipeM, -0.715, top, z, { rz: Math.PI / 2 }));
+  xs.forEach(x => add(B, new THREE.CylinderGeometry(pr, pr, 1.14, 12), pipeM, x, top, 0, { rx: Math.PI / 2 }));
+  xs.forEach(x => zs.forEach(z => boxMM(B, joint, x - 0.022, x + 0.022, top - 0.022, top + 0.022, z - 0.022, z + 0.022)));
+
+  const P = new THREE.Group(); B.add(P); groups.panels = P;
+  const t = 0.024, y = top + pr + t / 2, gap = 0.004;
+  const panels = [];
+  [{ x0: -1.62, x1: -1.28, full: true }, { x0: -1.28, x1: -0.94, full: true }, { x0: -0.94, x1: -0.60 }, { x0: -0.60, x1: 0.19, cham: true }].forEach(rw => {
+    const lx = rw.x1 - rw.x0 - gap, cx = (rw.x0 + rw.x1) / 2;
+    if (rw.full) { panels.push(add(P, panelGeo(lx, 1.20, t, null), null, cx, y, 0, { leather: true })); }
+    else {
+      panels.push(add(P, panelGeo(lx, 0.59, t, rw.cham ? 'neg' : null), null, cx, y, -0.297, { leather: true }));
+      panels.push(add(P, panelGeo(lx, 0.59, t, rw.cham ? 'pos' : null), null, cx, y, 0.297, { leather: true }));
+    }
+  });
+  panels.forEach(p => p.userData.y = p.position.y);
+
+  const S = groups.store;
+  boxMM(S, M(0x6c7448, { roughness: 0.7 }), -1.58, -1.08, 0.62, 0.92, 0.06, 0.54);
+  boxMM(S, M(0x2f3a33, { roughness: 0.6 }), -1.58, -1.20, 0.62, 0.86, -0.54, -0.38);
+  boxMM(S, M(0x2f3a33, { roughness: 0.6 }), -1.58, -1.20, 0.62, 0.86, -0.34, -0.18);
+  const fits = M(0x6aa4d8, { roughness: 0.2, transparent: true, opacity: 0.55 });
+  boxMM(S, fits, -0.92, -0.16, 0.62, 0.83, -0.55, -0.05);
+  boxMM(S, fits, -0.92, -0.16, 0.62, 0.83, 0.05, 0.55);
+
+  function setScheme(key) {
+    current = key;
+    leatherMeshes.forEach(m => m.material = leatherMats[key]);
+    grooveMeshes.forEach(m => m.material = grooveMats[key]);
+  }
+  return { groups, panels, wheels, setScheme };
+}
+
+/* ---------- scene 1: whole car, then open it up ---------- */
+const carR = makeRenderer('cvCar');
+carR.shadowMap.enabled = true; carR.shadowMap.type = THREE.PCFSoftShadowMap; carR.outputEncoding = THREE.sRGBEncoding;
+const carScene = new THREE.Scene();
+const carCam = new THREE.PerspectiveCamera(36, 1, 0.05, 60);
+const every = buildEvery(carScene);
+
+function renderCar(local) {
+  const open = smooth((local - 2.6) / 1.2);
+  every.groups.roof.position.y = open * 2.4;
+  every.groups.left.position.z = -open * 2.6;
+  every.groups.roof.visible = open < 0.98;
+  every.groups.left.visible = open < 0.98;
+  // bed panels drop in once the car is open
+  every.panels.forEach((p, i) => {
+    const k = ease((local - 3.9 - i * 0.12) / 0.45);
+    p.position.y = p.userData.y + (1 - k) * 0.9; p.visible = k > 0;
+  });
+  const a = -0.75 + local * 0.18;
+  const ext = new THREE.Vector3(Math.cos(a) * 6.6, 2.4, Math.sin(a) * 6.6 - 1.2);
+  const inn = new THREE.Vector3(-1.9, 3.7, -4.0);
+  const k = smooth((local - 2.6) / 1.6);
+  carCam.position.copy(ext.clone().lerp(inn, k));
+  carCam.lookAt(new THREE.Vector3(0, 0.9, 0).lerp(new THREE.Vector3(-0.4, 0.85, 0), k));
+  carR.render(carScene, carCam);
+  label('lbCar1', new THREE.Vector3(0, 2.2, 0), carCam, ease((local - 0.5) / 0.4) * (1 - ease((local - 2.4) / 0.3)));
+  label('lbCar2', new THREE.Vector3(-0.6, 1.4, 0), carCam, ease((local - 4.4) / 0.4));
+}
+
+/* =====================================================================
+   エブリイ床下収納モデル (telescoping front frame), dark-theme colors
+   ===================================================================== */
+const bedR = makeRenderer('cvBed');
+const bedScene = new THREE.Scene();
+const bedCam = new THREE.PerspectiveCamera(40, 1, 0.05, 50);
+bedScene.add(new THREE.HemisphereLight(0xffffff, 0x667788, 0.9));
+{ const d = new THREE.DirectionalLight(0xffffff, 0.6); d.position.set(1.5, 3, 2); bedScene.add(d); }
+let bedGroup = new THREE.Group(); bedScene.add(bedGroup);
+const BC = { pipe: '#B9C2CB', rod: '#7FA6F5', j59: '#F0A050', floor: '#2E3742', ghost: '#5D6874', panel: '#9C8A70',
+  mcase: '#8DBBE8', cargo: '#8E9C5C', space: '#D9A253', arrow: '#7FA6F5', boot: '#8A949E' };
+
+function buildBed(len, panelOp, appear) {
+  bedScene.remove(bedGroup); disposeGroup(bedGroup); bedGroup = new THREE.Group(); bedScene.add(bedGroup);
+  const group = bedGroup;
+  function mat(c, op) { return new THREE.MeshStandardMaterial({ color: c, transparent: op < 1, opacity: op, roughness: .8, depthWrite: op >= 1 }); }
+  function box(x0, x1, y0, y1, z0, z1, c, op, edge) {
+    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+    const m = new THREE.Mesh(g, mat(c, op)); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); group.add(m);
+    if (edge) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: edge })); e.position.copy(m.position); group.add(e); }
+    return m;
+  }
+  function dashed(x0, x1, y0, y1, z0, z1, c) {
+    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineDashedMaterial({ color: c, dashSize: .03, gapSize: .02 }));
+    e.computeLineDistances(); e.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); group.add(e);
+    const m = new THREE.Mesh(g, mat(c, .12)); m.position.copy(e.position); group.add(m); return m;
+  }
+  function pipe(a, b, c, r) {
+    const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b), d = Bv.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r || .014, r || .014, d.length(), 12), mat(c, 1));
+    m.position.copy(A).add(d.multiplyScalar(.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize()); group.add(m); return m;
+  }
+  const C = BC;
+  const Yd = .29, Yf = -.10, pr = .014, zR = 0;
+  const Ls = 0.75, foot = 0.38;
+  const zF = zR - len;
+  const footFront = -1.12, footRear = footFront + foot, seatTop = .25;
+  const zExt = zR - 1.06, zShort = zR - Ls;
+
+  box(-.65, .65, -.012, 0, footRear, .74, C.floor, 1);
+  box(-.65, .65, Yf - .012, Yf, -1.75, footRear, C.floor, 1);
+  [[-.6, -.02], [.02, .6]].forEach(([a, b]) => box(a, b, 0, seatTop, footRear + .01, -.025, C.ghost, .35, C.ghost));
+  [-.33, .33].forEach(x => { box(x - .24, x + .24, Yf, .95, -1.25, -1.19, C.ghost, .3, C.ghost); box(x - .24, x + .24, Yf, .30, -1.7, -1.25, C.ghost, .18); });
+
+  [[-.555, -.085], [.085, .555]].forEach(([a, b]) => {
+    [a, b].forEach(x => {
+      pipe([x, Yd, zF], [x, Yd, zR], C.rod, .016);
+      pipe([x, Yd, zF], [x, Yf + .025, zF], C.pipe);
+      pipe([x, Yf, zF], [x, Yf + .025, zF], C.pipe, .022);
+      pipe([x - .028, Yd, 0], [x + .028, Yd, 0], C.j59, .024);
+      pipe([x, Yd, -.06], [x, Yd, -.01], C.j59, .02);
     });
-    paint('cBase', 'base'); paint('cMain', 'main'); paint('cStitch', 'stitch');
-    document.querySelectorAll('.sw').forEach((s, i) => {
-      const appear = ease((local - 0.3 - i * 0.1) / 0.3);
-      s.classList.toggle('on', i === idx);
-      s.style.opacity = (i === idx ? 1 : 0.45) * appear;
-      s.style.transform = `translateY(${(1 - appear) * 30}px) scale(${i === idx ? 1.08 : 1})`;
+    pipe([a, Yd, zF], [b, Yd, zF], C.pipe); pipe([a, Yd, zF + .36], [b, Yd, zF + .36], C.pipe);
+  });
+  [-.555, -.085, .085, .555].forEach(x => box(x - .03, x + .03, Yf, Yf + .003, zExt, zShort, C.rod, .35));
+
+  [0, .565].forEach(z => { pipe([-.575, Yd, z], [.575, Yd, z], C.pipe); [-.58, .58].forEach(x => pipe([x - .008, Yd, z], [x + .008, Yd, z], C.pipe, .017)); });
+  [-.51, 0, .51].forEach(x => pipe([x, Yd, 0], [x, Yd, .565], C.pipe));
+  [[-.51, 0], [0, 0], [.51, 0], [-.51, .565], [.51, .565]].forEach(([x, z]) => { pipe([x, Yd, z], [x, .025, z], C.pipe); pipe([x, 0, z], [x, .025, z], C.pipe, .022); });
+
+  // top panels: A rides with the front frame; B fills the gap as the frame extends
+  const y0 = Yd + pr, y1 = y0 + .012;
+  const Al = (750 + 40) / 1000, Bl = (1050 - 750) / 1000;
+  const bk = clamp((len - Ls) / (1.06 - Ls));
+  [[-.59, 0], [0, .59]].forEach(([a, b]) => {
+    box(a + .002, b - .002, y0, y1, zF, zF + Al, C.panel, panelOp, C.panel);
+    if (bk > 0.02) box(a + .002, b - .002, y0, y1, zF + Al + .003, zF + Al + .003 + Bl * bk, C.panel, panelOp * .85, C.panel);
+  });
+  box(-.6, .6, y0, y1, .035, .375, C.panel, panelOp, C.panel); box(-.6, .6, y0, y1, .378, .718, C.panel, panelOp, C.panel);
+
+  // storage (①③④⑤), each popping in by its appear[] factor
+  const up = (k, h) => (1 - k) * h;
+  if (appear[0] > 0) {
+    const dy = up(appear[0], .5);
+    box(-.555, -.257, .003 + dy, .203 + dy, .13, .53, C.mcase, .6 * appear[0], C.mcase);
+    box(-.253, .045, .003 + dy, .203 + dy, .13, .53, C.mcase, .6 * appear[0], C.mcase);
+  }
+  if (appear[1] > 0) dashed(-.55, 0, .003, .2, .015, .14, C.space);
+  const tcD = .294, mid = (zExt + zShort) / 2, tz0 = mid - tcD / 2, tz1 = mid + tcD / 2;
+  if (appear[2] > 0) { const dy = up(appear[2], .5); box(-.516, -.124, Yf + .001 + dy, Yf + .357 + dy, tz0, tz1, C.cargo, .85 * appear[2], C.cargo); }
+  if (appear[3] > 0) {
+    const dy = up(appear[3], .5);
+    [0, 1, 2, 3].forEach(i => {
+      const x0 = .12 + i * .105, x1 = x0 + .1, toeFwd = i % 2 === 0;
+      const zs0 = toeFwd ? mid + .03 : mid - .15, zs1 = zs0 + .12;
+      box(x0, x1, Yf + .001 + dy, Yf + .30 + dy, zs0, zs1, C.boot, .9 * appear[3], C.boot);
+      box(x0, x1, Yf + .001 + dy, Yf + .10 + dy, mid - .15, mid + .15, C.boot, .9 * appear[3], C.boot);
     });
-    const nm = document.getElementById('palName');
-    nm.textContent = cur.name;
-    nm.style.opacity = idx === 0 ? ease((local - 0.5) / 0.3) : 1;
   }
+  return { zF, mid, Yd, Yf };
+}
 
-  // ---------- timeline ----------
-  function render(t) {
-    SCENES.forEach(([a, b], i) => {
-      const el = document.getElementById('s' + i);
-      const local = t - a, last = i === SCENES.length - 1;
-      const fadeIn = ease(local / 0.4);
-      const fadeOut = last ? 1 : 1 - ease((t - (b - 0.3)) / 0.3);
-      const visible = t >= a && (t < b || last);
-      el.style.opacity = visible ? Math.min(fadeIn, fadeOut) : 0;
-      el.querySelectorAll('.head, .center > *').forEach(h => h.style.transform = `translateY(${(1 - fadeIn) * 50}px)`);
-      el.querySelectorAll('.pill').forEach((p, k) => {
-        const o = ease((local - 1.6 - k * 0.5) / 0.35);
-        p.style.opacity = o; p.style.transform = `translateY(${(1 - o) * 30}px)`;
-      });
-      if (!visible) return;
-      if (i === 1) renderBed(local);
-      if (i === 2) renderRod(local);
-      if (i === 3) renderSeat(local);
+function renderBed(local) {
+  // 縮める → 伸ばす → 縮める
+  const ext = smooth((local - 1.4) / 1.3) - smooth((local - 4.6) / 1.3);
+  const len = lerp(0.75, 1.06, ext);
+  const appear = [0, 1, 2, 3].map(i => ease((local - 0.3 - i * 0.25) / 0.45));
+  const g = buildBed(len, 0.3, appear);
+  const a = 2.45 + local * 0.06;
+  bedCam.position.set(Math.cos(a) * 3.3, 2.15, Math.sin(a) * 3.3 - 0.4);
+  bedCam.lookAt(0, 0.05, -0.42);
+  bedR.render(bedScene, bedCam);
+  document.getElementById('mShort').className = ext < 0.5 ? 'on' : '';
+  document.getElementById('mExt').className = ext >= 0.5 ? 'on' : '';
+  const lenEl = document.getElementById('lbLen'); lenEl.textContent = Math.round(len * 1000) + ' mm';
+  label('lbLen', new THREE.Vector3(0.32, g.Yd + 0.03, g.zF - 0.08), bedCam, ease((local - 1.0) / 0.3));
+  label('lbS1', new THREE.Vector3(-.25, .32, .33), bedCam, appear[0]);
+  label('lbS4', new THREE.Vector3(-.40, g.Yf + .20, g.mid + .25), bedCam, appear[2]);
+  label('lbS5', new THREE.Vector3(.40, g.Yf + .20, g.mid + .25), bedCam, appear[3]);
+}
+
+/* =====================================================================
+   天井ロッドホルダー3D model, dark-theme colors
+   ===================================================================== */
+const rodR = makeRenderer('cvRod');
+const rodScene = new THREE.Scene();
+const rodCam = new THREE.PerspectiveCamera(40, 1, 0.02, 50);
+rodScene.add(new THREE.HemisphereLight(0xffffff, 0x667766, 0.9));
+{ const d = new THREE.DirectionalLight(0xffffff, 0.55); d.position.set(1.2, 3, 2); rodScene.add(d); }
+let rodGroup = new THREE.Group(); rodScene.add(rodGroup);
+const RC = { acc: '#8fbf9b', ceil: '#56615a', bed: '#8a7a5c', rod: '#d6dde4', reel: '#aab4be', person: '#8fa398', hit: '#f08a70', dim: '#e3a062', holder: '#b3a68c' };
+const RV = { A: 1210, E: 1160, B: 1040, bed: 320, H1: 900, H2: 826, Sx: 410, P: 120, Pa: 75, gap: 5, a2: 40, a21: 40, R: 100 };
+
+function buildRod(h, rodIn, peopleOp) {
+  rodScene.remove(rodGroup); disposeGroup(rodGroup); rodGroup = new THREE.Group(); rodScene.add(rodGroup);
+  const group = rodGroup;
+  function mat(c, op, side) { return new THREE.MeshStandardMaterial({ color: c, transparent: op < 1, opacity: op, roughness: .8, depthWrite: op >= 1, side: side || THREE.FrontSide }); }
+  function box(x0, x1, y0, y1, z0, z1, c, op) { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat(c, op)); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); group.add(m); return m; }
+  function pipe(a, b, c, r) {
+    const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b), d = Bv.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 14), mat(c, 1));
+    m.position.copy(A).add(d.clone().multiplyScalar(.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); group.add(m); return m;
+  }
+  function sphere(p, r, c, op) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat(c, op)); m.position.set(...p); group.add(m); return m; }
+  const HW = 0.6775, SB = 0.525, HOLEX = 0.58, R = 0.014, RODR = 0.008, NROD = 6, HEADR = 0.08;
+  const ZB = 0, ZF = -1.75, SBZ0 = -0.065, SBZ1 = -1.265, HOLES = [-0.2, -0.665, -1.13], XB_F = -1.1, XB_R = -0.35;
+  const C = RC;
+  const A = RV.A / 1000, E = RV.E / 1000, B = RV.B / 1000, bed = RV.bed / 1000,
+    P = (h === 'alt' ? RV.Pa : RV.P) / 1000, gap = RV.gap / 1000, a2 = RV.a2 / 1000, a21 = RV.a21 / 1000, reel = RV.R / 1000;
+  const sx = RV.Sx / 1000;
+  const Clen = (NROD - 1) * P + 0.12;
+  const ceilY = x => { const ax = Math.abs(x);
+    if (ax <= HOLEX) return A - (A - E) * (ax / HOLEX) * (ax / HOLEX);
+    const t = (ax - HOLEX) / (HW - HOLEX); return E - (E - B - 0.06) * (t * t * (3 - 2 * t)); };
+
+  box(-0.6, 0.6, bed - 0.02, bed, ZF, ZB, C.bed, 0.9);
+  [-1, 1].forEach(s => box(s > 0 ? HW : -HW - 0.01, s > 0 ? HW + 0.01 : -HW, bed, B, ZF, ZB, C.ceil, 0.15));
+  {
+    const N = 48, geo = new THREE.BufferGeometry(), pos = [], idx = [];
+    for (let i = 0; i <= N; i++) { const x = -HW + 2 * HW * i / N, y = ceilY(x); pos.push(x, y, ZB, x, y, ZF); }
+    for (let i = 0; i < N; i++) { const a = 2 * i; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    group.add(new THREE.Mesh(geo, mat(C.ceil, 0.35, THREE.DoubleSide)));
+    const line = []; for (let i = 0; i <= N; i++) { const x = -HW + 2 * HW * i / N; line.push(new THREE.Vector3(x, ceilY(x), ZB)); }
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(line), new THREE.LineBasicMaterial({ color: C.dim })));
+  }
+  [-1, 1].forEach(s => {
+    pipe([s * SB, B, SBZ0], [s * SB, B, SBZ1], C.acc, R);
+    HOLES.forEach(z => { box(s * HOLEX - 0.02, s * HOLEX + 0.02, B - 0.018, B + 0.018, z - 0.025, z + 0.025, C.dim, 1); pipe([s * HOLEX, B, z], [s * SB, B, z], C.dim, 0.012); });
+  });
+  const ceilAtBar = Math.min(ceilY(Clen / 2), A), top = ceilAtBar - gap;
+  const above = h === 'a2' ? R : (h === 'a21' ? a21 : Math.max(a21, R));
+  const barC = top - above;
+  [XB_F, XB_R].forEach(z => {
+    pipe([-Clen / 2, barC, z], [Clen / 2, barC, z], C.acc, R);
+    [-1, 1].forEach(s => pipe([s * SB, B, z], [s * Clen / 2, barC, z], C.acc, R * 0.9));
+  });
+  const rods = [];
+  for (let i = 0; i < NROD; i++) {
+    const x = (i - (NROD - 1) / 2) * P;
+    const type = h === 'alt' ? (i % 2 === 0 ? 'a21' : 'a2') : h;
+    const rodC = type === 'a2' ? barC - a2 : barC + a21 - RODR;
+    const reelZ = type === 'a2' && h === 'alt' ? XB_R - 0.09 : XB_R + 0.06;
+    rods.push({ x, type, rodC });
+    [XB_F, XB_R].forEach(z => {
+      const y0 = type === 'a2' ? rodC - RODR - 0.004 : barC + R, y1 = type === 'a2' ? barC - R : rodC + RODR + 0.004;
+      box(x - 0.018, x + 0.018, Math.min(y0, y1), Math.max(y0, y1), z - 0.02, z + 0.02, C.holder, 0.85);
     });
-    document.getElementById('bar').style.width = (clamp(t / DURATION) * 1080) + 'px';
+    const k = rodIn[i]; if (k <= 0) continue;
+    const dz = (1 - k) * 2.2;   // slides in from the back door
+    pipe([x, rodC, ZB + 0.05 + dz], [x, rodC, ZF + dz], C.rod, RODR);
+    box(x - 0.022, x + 0.022, rodC - reel, rodC - RODR, reelZ + dz, reelZ + 0.1 + dz, C.reel, 0.9);
   }
+  const people = [{ name: '170cm', sit: RV.H1 / 1000, x: -sx, z: -0.72 }, { name: '156cm', sit: RV.H2 / 1000, x: sx, z: -0.72 }];
+  return people.map(p => {
+    const headTop = bed + p.sit, headC = headTop - HEADR;
+    const ceilHere = Math.min(ceilY(p.x - HEADR), ceilY(p.x + HEADR), ceilY(p.x));
+    let obst = ceilHere;
+    rods.forEach(r => { if (Math.abs(r.x - p.x) < HEADR + RODR && r.rodC - RODR < obst) obst = r.rodC - RODR; });
+    if (Math.abs(Math.abs(p.x) - SB) < HEADR + R && B - R < obst) obst = B - R;
+    const hit = headTop > obst, pc = hit ? C.hit : C.person;
+    if (peopleOp > 0) {
+      box(p.x - 0.17, p.x + 0.17, bed, bed + 0.13, p.z - 0.2, p.z + 0.18, pc, 0.55 * peopleOp);
+      box(p.x - 0.16, p.x + 0.16, bed + 0.13, Math.max(bed + 0.2, headC - HEADR - 0.06), p.z - 0.11, p.z + 0.11, pc, 0.55 * peopleOp);
+      sphere([p.x, headC, p.z], HEADR, pc, 0.7 * peopleOp);
+    }
+    return { name: p.name, hit, pos: new THREE.Vector3(p.x, headTop + 0.07, p.z) };
+  });
+}
 
-  window.DURATION = DURATION;
-  window.render = render;
-  render(0);
+function renderRod(local) {
+  const modes = ['a2', 'a21', 'alt'];
+  const mi = local < 3.3 ? 0 : local < 5.2 ? 1 : 2;
+  const rodIn = [0, 1, 2, 3, 4, 5].map(i => ease((local - 0.4 - i * 0.22) / 0.6));
+  const pOp = ease((local - 2.0) / 0.4);
+  const res = buildRod(modes[mi], rodIn, pOp);
+  const a = 2.35 + local * 0.05;
+  rodCam.position.set(Math.cos(a) * 2.9, 1.75, Math.sin(a) * 2.9 - 0.75);
+  rodCam.lookAt(0, 0.82, -0.75);
+  rodR.render(rodScene, rodCam);
+  ['mA2', 'mA21', 'mAlt'].forEach((id, i) => document.getElementById(id).className = i === mi ? 'on' : '');
+  res.forEach((r, i) => {
+    const el = document.getElementById('lbP' + i);
+    el.textContent = r.name + (r.hit ? ' 当たる' : ' OK');
+    label('lbP' + i, r.pos, rodCam, pOp, r.hit ? 'bad' : 'ok');
+  });
+  label('lbRods', new THREE.Vector3(0, 1.3, -1.6), rodCam, ease((local - 1.2) / 0.4) * (1 - ease((local - 2.4) / 0.3)), 'y');
+}
 
-  if (!navigator.webdriver) {
-    const t0 = performance.now();
-    (function loop() { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();
-  }
+/* ---------- scene 4: the same car model, cycling the leather colors ---------- */
+const colR = makeRenderer('cvCol');
+colR.shadowMap.enabled = true; colR.shadowMap.type = THREE.PCFSoftShadowMap; colR.outputEncoding = THREE.sRGBEncoding;
+const colScene = new THREE.Scene();
+const colCam = new THREE.PerspectiveCamera(36, 1, 0.05, 60);
+const every2 = buildEvery(colScene);
+every2.groups.roof.visible = false; every2.groups.left.visible = false;
+const KEYS = Object.keys(SCHEMES);
+const swWrap = document.getElementById('swatches');
+KEYS.forEach(k => {
+  const s = SCHEMES[k], d = document.createElement('div'); d.className = 'sw';
+  d.innerHTML = `<div class="chip" style="background:${s.hex}"></div><div class="nm">${s.name}</div><div class="pr">${s.bed}<br>${s.seat}</div>`;
+  swWrap.appendChild(d);
+});
+function renderCol(local) {
+  const idx = clamp(Math.floor((local - 0.3) / 2.0), 0, 2);
+  every2.setScheme(KEYS[idx]);
+  const a = -2.1 + local * 0.08;
+  colCam.position.set(Math.cos(a) * 4.5 - 0.3, 3.4, Math.sin(a) * 4.5);
+  colCam.lookAt(-0.2, 0.85, 0);
+  colR.render(colScene, colCam);
+  document.querySelectorAll('.sw').forEach((s, i) => {
+    const ap = ease((local - 0.2 - i * 0.1) / 0.3);
+    s.classList.toggle('on', i === idx);
+    s.style.opacity = (i === idx ? 1 : 0.4) * ap;
+    s.style.transform = `translateY(${(1 - ap) * 30}px) scale(${i === idx ? 1.06 : 1})`;
+  });
+}
+
+/* ---------- timeline ---------- */
+const RENDER = { 1: renderCar, 2: renderBed, 3: renderRod, 4: renderCol };
+function render(t) {
+  SCENES.forEach(([a, b], i) => {
+    const el = document.getElementById('s' + i);
+    const local = t - a, last = i === SCENES.length - 1;
+    const fadeIn = ease(local / 0.4);
+    const fadeOut = last ? 1 : 1 - ease((t - (b - 0.3)) / 0.3);
+    const visible = t >= a && (t < b || last);
+    el.style.opacity = visible ? Math.min(fadeIn, fadeOut) : 0;
+    el.querySelectorAll('.head, .center > *').forEach(h => h.style.transform = `translateY(${(1 - fadeIn) * 50}px)`);
+    el.querySelectorAll('.pill').forEach((p, k) => {
+      const o = ease((local - 1.6 - k * 0.5) / 0.35);
+      p.style.opacity = o; p.style.transform = `translateY(${(1 - o) * 30}px)`;
+    });
+    if (visible && RENDER[i]) RENDER[i](local);
+  });
+  document.getElementById('bar').style.width = (clamp(t / DURATION) * 1080) + 'px';
+}
+
+window.DURATION = DURATION;
+window.render = render;
+render(0);
+
+if (!navigator.webdriver) {
+  const t0 = performance.now();
+  (function loop() { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();
+}
 </script>
 </body>
 </html>
