@@ -97,26 +97,35 @@ MEL_A = [(0, 76, .5), (.5, 79, .5), (1, 81, .5), (1.5, 79, .5), (2, 76, 1), (3, 
 MEL_B = [(0, 72, .5), (.5, 74, .5), (1, 76, .5), (1.5, 79, .5), (2, 81, .75), (2.75, 79, .25), (3, 76, 1),
          (4, 81, .5), (4.5, 84, .5), (5, 81, .5), (5.5, 79, .5), (6, 76, .5), (6.5, 79, .5), (7, 84, 1)]
 
+# a short, catchy 1-bar riff repeated (beat offset, midi, length in beats)
+RIFF = [(0, 72, .5), (.5, 76, .5), (1, 79, .5), (2, 76, .5), (2.5, 79, .5), (3, 81, .5)]
+
 nbars = int(np.ceil(DUR / BAR))
 for b in range(nbars):
     t0 = b * BAR
     root, tones = CHORDS[b % 4]
-    # gentle ukulele: down-strums on 1 and 3, a light up-strum on the "and" of 2 and 4
-    for k, off in enumerate([0, 1.5, 2, 3.5]):
-        up = k % 2 == 1
-        st = t0 + off * BEAT
-        for j, m in enumerate(tones[::-1] if up else tones):
-            put(pluck(m, 0.6, 0.15 if up else 0.28), st + j * 0.014, pan=-0.2, gain=0.08 if up else 0.13)
-    if b >= 1:
-        # soft bass on beats 1 and 3, plus a quiet kick to keep the pulse
-        put(bass(root, BEAT * 1.6), t0, gain=0.38)
-        put(bass(root + 7, BEAT * 1.6), t0 + 2 * BEAT, gain=0.3)
-        put(kick(), t0, gain=0.35)
-        put(kick(), t0 + 2 * BEAT, gain=0.25)
-    # a single simple melody line, played on every other phrase so it stays sparse
-    if b >= 2 and b % 4 == 2 and b < nbars - 1:
-        for off, m, ln in MEL_A:
-            put(marimba(m, max(ln * BEAT, 0.35)), t0 + off * BEAT, pan=0.2, gain=0.2)
+    last = b == nbars - 1
+    for q in range(4):
+        tq = t0 + q * BEAT
+        # four-on-the-floor kick from bar 2
+        if b >= 1:
+            put(kick(), tq, gain=0.8)
+        # offbeat hi-hat ("tsk" between kicks)
+        if b >= 1:
+            put(hat(open_=True), tq + BEAT / 2, pan=0.3, gain=0.13)
+        # clap on 2 and 4 from bar 3
+        if b >= 2 and q in (1, 3):
+            put(clap(), tq, gain=0.22)
+        # short chord stab on every beat
+        for j, m in enumerate(tones):
+            put(pluck(m, 0.3, 0.09), tq + j * 0.006, pan=-0.25, gain=0.09)
+        # bouncy offbeat bass
+        if b >= 1:
+            put(bass(root, BEAT * 0.4), tq + BEAT / 2, gain=0.45)
+    # riff from bar 3, same every bar so it is easy to follow
+    if b >= 2 and not last:
+        for off, m, ln in RIFF:
+            put(marimba(m, max(ln * BEAT, 0.3)), t0 + off * BEAT, pan=0.2, gain=0.2)
 
 # simple echo on the whole mix for space
 d = int(SR * BEAT * 0.75)
