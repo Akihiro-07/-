@@ -388,15 +388,29 @@ const carScene = new THREE.Scene();
 const carCam = new THREE.PerspectiveCamera(36, 1, 0.05, 60);
 const every = buildEvery(carScene);
 
+// Moves a part toward its home pose: k=0 far away (spinning), k=1 in place.
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+function flyIn(m, home, i, k, dist) {
+  const a = i * 2.399;   // golden-angle spread so parts come from all around
+  const off = new THREE.Vector3(Math.cos(a) * 0.8, 0.9 + (i % 3) * 0.3, Math.sin(a) * 0.8).multiplyScalar(dist * (1 - k));
+  m.position.copy(home.p).add(off);
+  m.quaternion.copy(home.q).premultiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, (1 - k) * 2.5));
+  m.visible = k > 0;
+}
+
 function renderCar(local) {
   const open = smooth((local - 2.6) / 1.2);
   every.groups.roof.position.y = open * 2.4;
   every.groups.left.position.z = -open * 2.6;
   every.groups.roof.visible = open < 0.98;
   every.groups.left.visible = open < 0.98;
-  // bed panels drop in once the car is open
+  // bed frame pipes fly in and assemble once the car is open, then the panels drop on
+  every.groups.bed.children.filter(c => c !== every.groups.panels).forEach((m, i) => {
+    if (!m.userData.home) m.userData.home = { p: m.position.clone(), q: m.quaternion.clone() };
+    flyIn(m, m.userData.home, i, ease((local - 3.4 - i * 0.025) / 0.45), 1.6);
+  });
   every.panels.forEach((p, i) => {
-    const k = ease((local - 3.9 - i * 0.12) / 0.45);
+    const k = ease((local - 4.7 - i * 0.09) / 0.4);
     p.position.y = p.userData.y + (1 - k) * 0.9; p.visible = k > 0;
   });
   const a = -0.75 + local * 0.18;
@@ -422,7 +436,8 @@ let bedGroup = new THREE.Group(); bedScene.add(bedGroup);
 const BC = { pipe: '#B9C2CB', rod: '#7FA6F5', j59: '#F0A050', floor: '#2E3742', ghost: '#5D6874', panel: '#9C8A70',
   mcase: '#8DBBE8', cargo: '#8E9C5C', space: '#D9A253', arrow: '#7FA6F5', boot: '#8A949E' };
 
-function buildBed(len, panelOp, appear) {
+function buildBed(len, panelOp, appear, asmT = 99, panelK = 1) {
+  let pipeIdx = 0;
   bedScene.remove(bedGroup); disposeGroup(bedGroup); bedGroup = new THREE.Group(); bedScene.add(bedGroup);
   const group = bedGroup;
   function mat(c, op) { return new THREE.MeshStandardMaterial({ color: c, transparent: op < 1, opacity: op, roughness: .8, depthWrite: op >= 1 }); }
@@ -441,7 +456,10 @@ function buildBed(len, panelOp, appear) {
   function pipe(a, b, c, r) {
     const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b), d = Bv.clone().sub(A);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(r || .014, r || .014, d.length(), 12), mat(c, 1));
-    m.position.copy(A).add(d.multiplyScalar(.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize()); group.add(m); return m;
+    m.position.copy(A).add(d.multiplyScalar(.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize()); group.add(m);
+    const i = pipeIdx++;
+    flyIn(m, { p: m.position.clone(), q: m.quaternion.clone() }, i, ease((asmT - i * 0.032) / 0.45), 0.9);
+    return m;
   }
   const C = BC;
   const Yd = .29, Yf = -.10, pr = .014, zR = 0;
@@ -472,14 +490,16 @@ function buildBed(len, panelOp, appear) {
   [[-.51, 0], [0, 0], [.51, 0], [-.51, .565], [.51, .565]].forEach(([x, z]) => { pipe([x, Yd, z], [x, .025, z], C.pipe); pipe([x, 0, z], [x, .025, z], C.pipe, .022); });
 
   // top panels: A rides with the front frame; B fills the gap as the frame extends
-  const y0 = Yd + pr, y1 = y0 + .012;
+  const pdy = (1 - panelK) * 0.5, y0 = Yd + pr + pdy, y1 = y0 + .012;
+  panelOp *= panelK;
   const Al = (750 + 40) / 1000, Bl = (1050 - 750) / 1000;
   const bk = clamp((len - Ls) / (1.06 - Ls));
   [[-.59, 0], [0, .59]].forEach(([a, b]) => {
+    if (panelK <= 0) return;
     box(a + .002, b - .002, y0, y1, zF, zF + Al, C.panel, panelOp, C.panel);
     if (bk > 0.02) box(a + .002, b - .002, y0, y1, zF + Al + .003, zF + Al + .003 + Bl * bk, C.panel, panelOp * .85, C.panel);
   });
-  box(-.6, .6, y0, y1, .035, .375, C.panel, panelOp, C.panel); box(-.6, .6, y0, y1, .378, .718, C.panel, panelOp, C.panel);
+  if (panelK > 0) { box(-.6, .6, y0, y1, .035, .375, C.panel, panelOp, C.panel); box(-.6, .6, y0, y1, .378, .718, C.panel, panelOp, C.panel); }
 
   // storage (①③④⑤), each popping in by its appear[] factor
   const up = (k, h) => (1 - k) * h;
@@ -505,10 +525,10 @@ function buildBed(len, panelOp, appear) {
 
 function renderBed(local) {
   // 縮める → 伸ばす → 縮める
-  const ext = smooth((local - 1.4) / 1.3) - smooth((local - 4.6) / 1.3);
+  const ext = smooth((local - 3.4) / 1.1) - smooth((local - 5.6) / 1.1);
   const len = lerp(0.75, 1.06, ext);
-  const appear = [0, 1, 2, 3].map(i => ease((local - 0.3 - i * 0.25) / 0.45));
-  const g = buildBed(len, 0.3, appear);
+  const appear = [0, 1, 2, 3].map(i => ease((local - 2.4 - i * 0.2) / 0.4));
+  const g = buildBed(len, 0.3, appear, local - 0.1, ease((local - 1.9) / 0.4));
   const a = 2.45 + local * 0.06;
   bedCam.position.set(Math.cos(a) * 3.3, 2.15, Math.sin(a) * 3.3 - 0.4);
   bedCam.lookAt(0, 0.05, -0.42);
@@ -516,7 +536,7 @@ function renderBed(local) {
   document.getElementById('mShort').className = ext < 0.5 ? 'on' : '';
   document.getElementById('mExt').className = ext >= 0.5 ? 'on' : '';
   const lenEl = document.getElementById('lbLen'); lenEl.textContent = Math.round(len * 1000) + ' mm';
-  label('lbLen', new THREE.Vector3(0.32, g.Yd + 0.03, g.zF - 0.08), bedCam, ease((local - 1.0) / 0.3));
+  label('lbLen', new THREE.Vector3(0.32, g.Yd + 0.03, g.zF - 0.08), bedCam, ease((local - 3.1) / 0.3));
   label('lbS1', new THREE.Vector3(-.25, .32, .33), bedCam, appear[0]);
   label('lbS4', new THREE.Vector3(-.40, g.Yf + .20, g.mid + .25), bedCam, appear[2]);
   label('lbS5', new THREE.Vector3(.40, g.Yf + .20, g.mid + .25), bedCam, appear[3]);
