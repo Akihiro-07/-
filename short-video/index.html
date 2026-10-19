@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>エブリイ × Claude</title>
+<title>車中泊カスタム × Claude</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="node_modules/three/build/three.min.js"></script>
 <style>
@@ -51,19 +51,19 @@
 <div id="stage">
 
   <section class="scene center" id="s0">
-    <div class="tag">EVERY DA17W × CLAUDE</div>
-    <div class="h1">Claudeと<br>つくってる、<br><span class="x">うちのエブリイ。</span></div>
+    <div class="tag">MY CAR × CLAUDE</div>
+    <div class="h1">Claudeと<br>つくってる、<br><span class="x">うちのクルマ。</span></div>
     <div class="sub">車中泊カスタムの全部を、<br>3Dモデルで考えてます。</div>
   </section>
 
   <section class="scene" id="s1">
     <div class="head"><div class="tag">STEP 0 / MODEL</div><div class="h2">まずは車ごと3Dに</div></div>
     <canvas class="view" id="cvCar" width="1080" height="1080"></canvas>
-    <div class="lb" id="lbCar1">エブリイワゴン DA17W・標準ルーフ</div>
+    <div class="lb" id="lbCar1">実車の寸法で再現</div>
     <div class="lb y" id="lbCar2">屋根と左側を外して車内へ</div>
     <div class="pills">
-      <div class="pill">ボディ色は<b>シーダーグリーン</b></div>
-      <div class="pill">全長3,395・全高1,815mmで再現</div>
+      <div class="pill">外観から車内まで<b>まるごと</b>モデル化</div>
+      <div class="pill">ここから<b>カスタムを設計</b></div>
     </div>
   </section>
 
@@ -83,7 +83,7 @@
 
   <section class="scene" id="s3">
     <div class="head"><div class="tag">02 / ROD HOLDER</div><div class="h2">天井ロッドホルダー</div></div>
-    <div class="mode"><div id="mA2">下（U-A2）</div><div id="mA21">上（U-A21）</div><div id="mAlt">交互</div></div>
+    <div class="mode"><div id="mA2">下付け</div><div id="mA21">上付け</div><div id="mAlt">交互</div></div>
     <canvas class="view" id="cvRod" width="1080" height="1080"></canvas>
     <div class="lb" id="lbP0">170cm</div>
     <div class="lb" id="lbP1">156cm</div>
@@ -641,7 +641,7 @@ const KEYS = Object.keys(SCHEMES);
 const swWrap = document.getElementById('swatches');
 KEYS.forEach(k => {
   const s = SCHEMES[k], d = document.createElement('div'); d.className = 'sw';
-  d.innerHTML = `<div class="chip" style="background:${s.hex}"></div><div class="nm">${s.name}</div><div class="pr">${s.bed}<br>${s.seat}</div>`;
+  d.innerHTML = `<div class="chip" style="background:${s.hex}"></div><div class="nm">${s.name}</div>`;
   swWrap.appendChild(d);
 });
 function renderCol(local) {
