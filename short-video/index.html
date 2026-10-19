@@ -71,7 +71,6 @@
     <div class="head"><div class="tag">01 / BED KIT</div><div class="h2">伸縮式ベッド</div></div>
     <div class="mode"><div id="mShort">運転：縮める</div><div id="mExt">就寝：伸ばす</div></div>
     <canvas class="view" id="cvBed" width="1080" height="1080"></canvas>
-    <div class="lb y" id="lbLen">750 mm</div>
     <div class="lb" id="lbS1">フィッツケース×2</div>
     <div class="lb" id="lbS4">トランクカーゴ</div>
     <div class="lb" id="lbS5">防水ブーツ</div>
@@ -404,15 +403,9 @@ function renderCar(local) {
   every.groups.left.position.z = -open * 2.6;
   every.groups.roof.visible = open < 0.98;
   every.groups.left.visible = open < 0.98;
-  // bed frame pipes fly in and assemble once the car is open, then the panels drop on
-  every.groups.bed.children.filter(c => c !== every.groups.panels).forEach((m, i) => {
-    if (!m.userData.home) m.userData.home = { p: m.position.clone(), q: m.quaternion.clone() };
-    flyIn(m, m.userData.home, i, ease((local - 3.4 - i * 0.025) / 0.45), 1.6);
-  });
-  every.panels.forEach((p, i) => {
-    const k = ease((local - 4.7 - i * 0.09) / 0.4);
-    p.position.y = p.userData.y + (1 - k) * 0.9; p.visible = k > 0;
-  });
+  // the bed is assembled in the next scene, so the car opens onto an empty load space
+  every.groups.bed.visible = false;
+  every.groups.store.visible = false;
   const a = -0.75 + local * 0.18;
   const ext = new THREE.Vector3(Math.cos(a) * 6.6, 2.4, Math.sin(a) * 6.6 - 1.2);
   const inn = new THREE.Vector3(-1.9, 3.7, -4.0);
@@ -535,8 +528,6 @@ function renderBed(local) {
   bedR.render(bedScene, bedCam);
   document.getElementById('mShort').className = ext < 0.5 ? 'on' : '';
   document.getElementById('mExt').className = ext >= 0.5 ? 'on' : '';
-  const lenEl = document.getElementById('lbLen'); lenEl.textContent = Math.round(len * 1000) + ' mm';
-  label('lbLen', new THREE.Vector3(0.32, g.Yd + 0.03, g.zF - 0.08), bedCam, ease((local - 3.1) / 0.3));
   label('lbS1', new THREE.Vector3(-.25, .32, .33), bedCam, appear[0]);
   label('lbS4', new THREE.Vector3(-.40, g.Yf + .20, g.mid + .25), bedCam, appear[2]);
   label('lbS5', new THREE.Vector3(.40, g.Yf + .20, g.mid + .25), bedCam, appear[3]);
