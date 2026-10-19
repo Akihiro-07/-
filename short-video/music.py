@@ -1,5 +1,5 @@
-# Synthesizes an original, royalty-free "sunny stroll" backing track.
-# Fingerpicked guitar, whistle melody, pizzicato walking bass, light snaps.
+# Synthesizes an original, royalty-free "honwaka / puppu" style backing track:
+# bouncy tuba oom-pah, recorder melody, pizzicato strings, glockenspiel, woodblock.
 # Usage: python3 music.py [seconds] [out.wav]
 import sys
 import wave
@@ -8,14 +8,13 @@ import numpy as np
 SR = 44100
 DUR = float(sys.argv[1]) if len(sys.argv) > 1 else 34.0
 OUT = sys.argv[2] if len(sys.argv) > 2 else 'music.wav'
-BPM = 100
+BPM = 116
 BEAT = 60 / BPM
 BAR = BEAT * 4
-SWING = 0.58          # gentle shuffle: offbeat 8ths land a little late
 N = int(SR * DUR)
 L = np.zeros(N)
 R = np.zeros(N)
-rng = np.random.default_rng(3)
+rng = np.random.default_rng(5)
 
 
 def hz(m):
@@ -23,12 +22,7 @@ def hz(m):
 
 
 def at(bar, beat):
-    """Time of a (possibly fractional) beat, with swung offbeat 8ths."""
-    whole = np.floor(beat)
-    frac = beat - whole
-    if abs(frac - 0.5) < 1e-6:
-        frac = SWING
-    return bar * BAR + (whole + frac) * BEAT
+    return bar * BAR + beat * BEAT
 
 
 def put(sig, t, pan=0.0, gain=1.0):
@@ -40,103 +34,112 @@ def put(sig, t, pan=0.0, gain=1.0):
     R[i:i + len(sig)] += sig * np.sqrt((1 + pan) / 2)
 
 
-_gcache = {}
+def lowpass(x, k):
+    return np.convolve(x, np.ones(k) / k, 'same')
 
 
-def guitar(m, length=1.2):
-    # Karplus-Strong plucked string: warm, acoustic-guitar-like
-    key = (m, length)
-    if key not in _gcache:
-        f = hz(m)
-        n = int(SR * length)
-        p = int(round(SR / f))
-        buf = np.convolve(rng.uniform(-1, 1, p), [0.5, 0.5], 'same')
-        reps = n // p + 1
-        out = np.empty(reps * p)
-        for r in range(reps):
-            out[r * p:(r + 1) * p] = buf
-            buf = 0.996 * 0.5 * (buf + np.roll(buf, -1))
-        _gcache[key] = out[:n] * 0.6
-    return _gcache[key]
-
-
-def whistle(m, length):
+def tuba(m, length, slide=0.0):
+    """Round, slightly comic brass 'pu'. slide>0 bends the pitch up (for the 'puu')."""
     n = int(SR * length)
     t = np.arange(n) / SR
-    f = hz(m) * (1 + 0.006 * np.sin(2 * np.pi * 5.5 * t) * np.minimum(t / 0.25, 1))
-    f = f * (1 - 0.02 * np.exp(-t / 0.03))   # tiny upward scoop, like a real whistle
-    s = np.sin(2 * np.pi * np.cumsum(f) / SR)
-    breath = np.convolve(rng.uniform(-1, 1, n), np.ones(30) / 30, 'same') * 0.05
-    a = np.minimum(t / 0.04, 1) * np.clip((length - t) / 0.08, 0, 1)
+    f = hz(m) * (1 - 0.04 * np.exp(-t / 0.02)) * (1 + slide * np.clip(t / length, 0, 1))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.25 * np.sin(3 * ph) + 0.1 * np.sin(4 * ph)
+    a = np.minimum(t / 0.018, 1) * np.clip((length - t) / 0.04, 0, 1)
+    return lowpass(s * a, 6)
+
+
+def recorder(m, length):
+    n = int(SR * length)
+    t = np.arange(n) / SR
+    f = hz(m) * (1 + 0.005 * np.sin(2 * np.pi * 5 * t) * np.clip((t - 0.15) / 0.2, 0, 1))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = np.sin(ph) + 0.12 * np.sin(3 * ph) + 0.04 * np.sin(2 * ph)
+    breath = lowpass(rng.uniform(-1, 1, n), 12) * 0.08 * np.exp(-t / 0.05)
+    a = np.minimum(t / 0.015, 1) * np.clip((length - t) / 0.03, 0, 1)
     return (s + breath) * a
 
 
-def pizz(m, length=0.5):
+def pizz(m, length=0.35):
+    n = int(SR * length)
+    t = np.arange(n) / SR
+    ph = 2 * np.pi * hz(m) * t
+    s = np.sin(ph) + 0.4 * np.sin(2 * ph) + 0.15 * np.sin(3 * ph)
+    return s * np.minimum(t / 0.003, 1) * np.exp(-t / 0.09)
+
+
+def glock(m, length=1.0):
     n = int(SR * length)
     t = np.arange(n) / SR
     f = hz(m)
-    s = np.sin(2 * np.pi * f * t) + 0.25 * np.sin(2 * np.pi * 2 * f * t)
-    return s * np.minimum(t / 0.004, 1) * np.exp(-t / 0.22)
+    s = np.sin(2 * np.pi * f * t) + 0.3 * np.sin(2 * np.pi * f * 2.76 * t) * np.exp(-t / 0.08)
+    return s * np.minimum(t / 0.001, 1) * np.exp(-t / 0.45)
 
 
-def snap():
-    n = int(SR * 0.08)
+def woodblock(pitch=900):
+    n = int(SR * 0.06)
     t = np.arange(n) / SR
-    s = np.diff(rng.uniform(-1, 1, n), prepend=0)
-    return s * np.exp(-t / 0.012)
+    return np.sin(2 * np.pi * pitch * t) * np.exp(-t / 0.012)
 
 
-def shaker():
-    n = int(SR * 0.07)
+def kick():
+    n = int(SR * 0.2)
     t = np.arange(n) / SR
-    s = np.diff(rng.uniform(-1, 1, n), prepend=0)
-    return s * np.sin(np.pi * t / t[-1])
+    f = 55 + 70 * np.exp(-t / 0.02)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.08)
 
 
-# G - Em - C - D  (walking bass per beat, guitar voicing low->high)
-CHORDS = [
-    ([43, 47, 50, 52], [55, 59, 62, 67]),   # G
-    ([40, 43, 47, 45], [52, 59, 64, 67]),   # Em
-    ([36, 40, 43, 45], [48, 55, 60, 64]),   # C
-    ([38, 42, 45, 42], [50, 57, 62, 66]),   # D
+# 8-bar loop in F: F Bb C F | Dm Bb C F   -> (tuba root, tuba fifth, pizz chord)
+PROG = [(41, 48, [65, 69, 72]), (46, 41, [65, 70, 74]), (48, 43, [64, 67, 72]), (41, 48, [65, 69, 72]),
+        (38, 45, [65, 69, 74]), (46, 41, [65, 70, 74]), (48, 43, [64, 67, 72]), (41, 48, [65, 69, 72])]
+# bouncy 8-bar melody (bar, beat, midi, beats)
+MELODY = [
+    (0, 0, 81, .5), (0, .5, 84, .5), (0, 1, 81, .5), (0, 1.5, 77, .5), (0, 2, 79, .5), (0, 2.5, 81, .5), (0, 3, 79, 1),
+    (1, 0, 82, .5), (1, .5, 81, .5), (1, 1, 79, .5), (1, 1.5, 77, .5), (1, 2, 74, 1), (1, 3, 77, 1),
+    (2, 0, 79, .5), (2, .5, 81, .5), (2, 1, 82, .5), (2, 1.5, 84, .5), (2, 2, 86, .5), (2, 2.5, 84, .5), (2, 3, 82, 1),
+    (3, 0, 81, 1.5), (3, 2, 77, .5),
+    (4, 0, 77, .5), (4, .5, 81, .5), (4, 1, 86, 1), (4, 2, 84, .5), (4, 2.5, 81, .5), (4, 3, 77, 1),
+    (5, 0, 74, .5), (5, .5, 77, .5), (5, 1, 82, 1), (5, 2, 81, .5), (5, 2.5, 79, .5), (5, 3, 77, 1),
+    (6, 0, 76, .5), (6, .5, 79, .5), (6, 1, 84, .5), (6, 1.5, 82, .5), (6, 2, 81, .5), (6, 2.5, 79, .5), (6, 3, 76, 1),
+    (7, 0, 77, 1.5), (7, 2, 72, .5),
 ]
-# 4-bar whistle tune (bar, beat, midi, beats); answered by a variation
-TUNE_A = [(0, 0, 74, 1.5), (0, 1.5, 76, .5), (0, 2, 79, 1), (0, 3, 76, 1),
-          (1, 0, 74, 2), (1, 2.5, 71, .5), (1, 3, 74, 1),
-          (2, 0, 72, 1.5), (2, 1.5, 74, .5), (2, 2, 76, 1), (2, 3, 79, 1),
-          (3, 0, 78, 2.5), (3, 3, 74, 1)]
-TUNE_B = [(0, 0, 79, 1.5), (0, 1.5, 81, .5), (0, 2, 83, 1), (0, 3, 79, 1),
-          (1, 0, 76, 2), (1, 2.5, 74, .5), (1, 3, 76, 1),
-          (2, 0, 72, 1), (2, 1, 76, 1), (2, 2, 74, 1), (2, 3, 72, 1),
-          (3, 0, 71, 1.5), (3, 1.5, 69, .5), (3, 2, 67, 2)]
 
 nbars = int(np.ceil(DUR / BAR))
 for b in range(nbars):
-    bass, voice = CHORDS[b % 4]
-    # fingerpicking: bass string on 1 & 3, treble notes rolling on the 8ths
-    for beat, k in [(0, 0), (0.5, 2), (1, 1), (1.5, 3), (2, 0), (2.5, 2), (3, 1), (3.5, 3)]:
-        put(guitar(voice[k], 1.4), at(b, beat), pan=-0.3, gain=0.5 if k == 0 else 0.32)
+    root, fifth, chord = PROG[0] if b == 0 else PROG[(b - 1) % 8]
+    # oom-pah: tuba on 1 and 3, pizzicato chord on 2 and 4
+    put(tuba(root, BEAT * 0.55), at(b, 0), gain=0.55)
+    put(tuba(fifth, BEAT * 0.55), at(b, 2), gain=0.48)
+    for q in (1, 3):
+        for j, m in enumerate(chord):
+            put(pizz(m), at(b, q) + j * 0.004, pan=-0.3, gain=0.16)
+    # light pulse + woodblock "tick-tock" on the offbeats
     if b >= 1:
-        for q in range(4):
-            put(pizz(bass[q]), at(b, q), gain=0.55)
-        for q in (1, 3):
-            put(snap(), at(b, q), pan=0.25, gain=0.35)
-        for e in range(8):
-            put(shaker(), at(b, e / 2), pan=0.45, gain=0.05 if e % 2 == 0 else 0.08)
-    # whistle tune from bar 3: A phrase, then B phrase, then repeat
-    if b >= 2 and (b - 2) % 4 == 0:
-        tune = TUNE_A if ((b - 2) // 4) % 2 == 0 else TUNE_B
-        for bb, beat, m, ln in tune:
-            put(whistle(m, ln * BEAT * 0.95), at(b + bb, beat), pan=0.15, gain=0.22)
+        for q in (0, 2):
+            put(kick(), at(b, q), gain=0.35)
+        for e in range(4):
+            put(woodblock(1000 if e % 2 else 800), at(b, e + 0.5), pan=0.35, gain=0.16)
+    # melody: recorder from bar 1, glockenspiel joins on the repeat
+    if b >= 1 and (b - 1) % 8 == 0:
+        second = (b - 1) // 8 >= 1
+        for bb, beat, m, ln in MELODY:
+            dur = ln * BEAT * (0.6 if ln <= 0.5 else 0.85)   # short and bouncy
+            put(recorder(m, dur), at(b + bb, beat), pan=0.15, gain=0.24)
+            if second:
+                put(glock(m + 12), at(b + bb, beat), pan=0.4, gain=0.07)
+        # the "pu-ppuu" answer at the end of each 4-bar line
+        for line in (3, 7):
+            put(tuba(53, BEAT * 0.3), at(b + line, 3), gain=0.5)
+            put(tuba(57, BEAT * 0.9, slide=0.06), at(b + line, 3.5), gain=0.5)
 
-# light room reverb (a few short echoes)
-for delay, g in ((0.031, 0.25), (0.053, 0.18), (0.089, 0.12), (0.13, 0.08)):
+# small room
+for delay, g in ((0.027, 0.2), (0.047, 0.14), (0.081, 0.09)):
     d = int(SR * delay)
     L[d:] += L[:-d] * g
     R[d:] += R[:-d] * g * 0.9
 
 t = np.arange(N) / SR
-fade = np.minimum(t / 0.2, 1) * np.clip((DUR - t) / 2.0, 0, 1)
+fade = np.minimum(t / 0.1, 1) * np.clip((DUR - t) / 1.8, 0, 1)
 L *= fade
 R *= fade
 peak = max(np.abs(L).max(), np.abs(R).max())
