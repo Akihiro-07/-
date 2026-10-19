@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>車いじり × Claude</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="node_modules/three/build/three.min.js"></script>
 <style>
   :root {
     --bg1: #14161c; --bg2: #232733;
@@ -13,162 +14,283 @@
   html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg1); }
   body { font-family: "Noto Sans JP", "IPAGothic", sans-serif; color: var(--ink); }
   #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden;
-    background: radial-gradient(circle at 50% 30%, var(--bg2), var(--bg1) 70%); }
-  .scene { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 0 90px; text-align: center; opacity: 0; }
-  .tag { font-size: 44px; font-weight: 700; color: var(--accent); letter-spacing: .12em; margin-bottom: 28px; }
-  .h1 { font-size: 132px; font-weight: 900; line-height: 1.15; }
-  .h2 { font-size: 104px; font-weight: 900; line-height: 1.2; }
-  .sub { font-size: 52px; font-weight: 500; color: var(--mute); line-height: 1.6; margin-top: 40px; }
+    background: radial-gradient(circle at 50% 45%, var(--bg2), var(--bg1) 70%); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 90px; }
+  .head { position: absolute; top: 170px; left: 0; right: 0; text-align: center; }
+  .tag { font-size: 42px; font-weight: 700; color: var(--accent); letter-spacing: .14em; margin-bottom: 18px; }
+  .h1 { font-size: 124px; font-weight: 900; line-height: 1.2; }
+  .h2 { font-size: 100px; font-weight: 900; line-height: 1.2; }
+  .sub { font-size: 50px; font-weight: 500; color: var(--mute); line-height: 1.6; margin-top: 40px; }
   .x { color: var(--accent); }
-  .num { position: absolute; top: 230px; left: 90px; font-size: 220px; font-weight: 900;
-    color: rgba(217,119,87,.16); }
-  .art { width: 760px; height: 560px; margin-bottom: 70px; }
-  .pts { list-style: none; margin-top: 50px; text-align: left; }
-  .pts li { font-size: 50px; font-weight: 700; line-height: 1.5; margin: 18px 0; opacity: 0;
-    padding-left: 70px; position: relative; }
-  .pts li::before { content: "✓"; position: absolute; left: 0; color: var(--accent2); }
-  .chat { width: 900px; text-align: left; }
-  .bub { font-size: 44px; line-height: 1.55; padding: 34px 44px; border-radius: 40px; margin: 30px 0;
-    opacity: 0; max-width: 820px; }
-  .me { background: #3a3f4d; margin-left: auto; border-bottom-right-radius: 10px; }
-  .ai { background: var(--ink); color: #1d1d1d; border-bottom-left-radius: 10px; }
-  .ai b { color: var(--accent); }
-  .who { font-size: 32px; font-weight: 700; color: var(--mute); margin-bottom: 8px; }
+  canvas.view { position: absolute; top: 470px; left: 0; width: 1080px; height: 1080px; }
+  .pills { position: absolute; top: 1590px; left: 60px; right: 60px; display: flex; flex-wrap: wrap;
+    justify-content: center; gap: 22px; }
+  .pill { font-size: 40px; font-weight: 700; padding: 16px 34px; border-radius: 60px;
+    border: 3px solid rgba(245,241,234,.25); background: rgba(255,255,255,.04); opacity: 0; }
+  .pill b { color: var(--accent2); }
+  .label3d { position: absolute; font-size: 38px; font-weight: 700; color: var(--accent2);
+    background: rgba(20,22,28,.75); padding: 8px 22px; border-radius: 14px; opacity: 0; white-space: nowrap; }
+  /* seat cover */
+  #seat { position: absolute; top: 470px; left: 140px; width: 800px; height: 800px; }
+  .swatches { position: absolute; top: 1330px; left: 0; right: 0; display: flex; justify-content: center; gap: 36px; }
+  .sw { width: 170px; text-align: center; opacity: .45; transform-origin: 50% 0; }
+  .sw .chip { height: 130px; border-radius: 28px; border: 5px solid transparent; overflow: hidden; display: flex; }
+  .sw .chip span { flex: 1; }
+  .sw .chip span:last-child { flex: .35; }
+  .sw.on .chip { border-color: var(--ink); }
+  .sw .nm { font-size: 30px; font-weight: 700; margin-top: 14px; line-height: 1.3; }
+  #palName { position: absolute; top: 1660px; left: 0; right: 0; text-align: center;
+    font-size: 58px; font-weight: 900; }
   .bar { position: absolute; left: 0; bottom: 0; height: 14px; background: var(--accent); }
-  .stroke { fill: none; stroke: var(--ink); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
-  .acc { fill: none; stroke: var(--accent); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
-  .acc2 { fill: none; stroke: var(--accent2); stroke-width: 10; stroke-linecap: round; }
-  .dim { fill: none; stroke: var(--mute); stroke-width: 4; stroke-dasharray: 14 10; }
-  .dimt { fill: var(--mute); font-size: 34px; font-weight: 700; font-family: "Noto Sans JP", sans-serif; }
+  .chips { display: flex; gap: 18px; margin-top: 70px; }
+  .chips div { white-space: nowrap; font-size: 36px; font-weight: 700; padding: 18px 34px; border-radius: 60px; background: rgba(217,119,87,.16); color: var(--ink); }
 </style>
 </head>
 <body>
 <div id="stage">
 
   <!-- 0: hook -->
-  <section class="scene" id="s0">
+  <section class="scene center" id="s0">
     <div class="tag">MY CAR PROJECTS</div>
-    <div class="h1">車いじり<br><span class="x">×</span> Claude</div>
-    <div class="sub">AIと一緒に、<br>クルマをもっと自分仕様に。</div>
+    <div class="h1">Claudeと<br>つくってる、<br><span class="x">うちのクルマ。</span></div>
   </section>
 
-  <!-- 1: bed kit -->
+  <!-- 1: bed kit model -->
   <section class="scene" id="s1">
-    <div class="num">01</div>
-    <svg class="art" viewBox="0 0 760 560">
-      <path class="stroke" d="M60 420 L60 250 Q60 150 170 130 L520 120 Q620 120 680 230 L700 300 L700 420 Z"/>
-      <circle class="stroke" cx="190" cy="430" r="58" fill="#14161c"/>
-      <circle class="stroke" cx="570" cy="430" r="58" fill="#14161c"/>
-      <path class="acc draw" pathLength="1" d="M110 330 L620 330 L620 360 L110 360 Z"/>
-      <path class="acc draw" pathLength="1" d="M160 360 L160 400 M360 360 L360 400 M570 360 L570 400"/>
-      <path class="dim draw" pathLength="1" d="M110 300 L620 300"/>
-      <text class="dimt fade" x="300" y="285">1,800 mm</text>
-    </svg>
-    <div class="tag">BED KIT</div>
-    <div class="h2">ベッドキット</div>
-    <ul class="pts">
-      <li>車内寸法から設計を相談</li>
-      <li>材料リスト・カット図を作成</li>
-      <li>組み立て手順もステップで</li>
-    </ul>
-  </section>
-
-  <!-- 2: rod holder -->
-  <section class="scene" id="s2">
-    <div class="num">02</div>
-    <svg class="art" viewBox="0 0 760 560">
-      <path class="stroke" d="M60 470 L60 200 Q60 110 170 100 L590 100 Q680 100 700 200 L700 470"/>
-      <path class="acc draw" pathLength="1" d="M150 140 L150 200 M610 140 L610 200 M150 200 L610 200"/>
-      <path class="acc draw" pathLength="1" d="M150 170 L610 170"/>
-      <path class="acc2 draw" pathLength="1" d="M90 182 L700 160"/>
-      <path class="acc2 draw" pathLength="1" d="M100 192 L690 186"/>
-      <path class="acc2 draw" pathLength="1" d="M110 156 L680 176"/>
-      <circle class="stroke fade" cx="220" cy="186" r="14"/>
-    </svg>
-    <div class="tag">ROD HOLDER</div>
-    <div class="h2">ロッドホルダー</div>
-    <ul class="pts">
-      <li>天井に竿を積むレイアウト</li>
-      <li>取り付け方法・強度を確認</li>
-      <li>必要パーツを洗い出し</li>
-    </ul>
-  </section>
-
-  <!-- 3: seat cover -->
-  <section class="scene" id="s3">
-    <div class="num">03</div>
-    <svg class="art" viewBox="0 0 760 560">
-      <path class="stroke" d="M300 70 Q380 50 450 70 L460 160 Q380 175 300 160 Z"/>
-      <path class="stroke" d="M270 190 Q380 170 490 190 L520 380 Q380 405 240 380 Z"/>
-      <path class="stroke" d="M220 400 Q380 430 540 400 L560 470 Q380 500 200 470 Z"/>
-      <path class="acc draw" pathLength="1" d="M290 215 Q380 198 470 215 L495 365 Q380 385 265 365 Z"/>
-      <path class="dim draw" pathLength="1" d="M380 205 L380 375"/>
-      <path class="acc2 draw" pathLength="1" d="M600 120 L700 120 L700 260 L600 260 Z"/>
-      <text class="dimt fade" x="598" y="305">型紙</text>
-    </svg>
-    <div class="tag">SEAT COVER</div>
-    <div class="h2">シートカバー</div>
-    <ul class="pts">
-      <li>シート形状から型紙づくり</li>
-      <li>生地・素材選びの比較</li>
-      <li>縫い方・取り付けのコツ</li>
-    </ul>
-  </section>
-
-  <!-- 4: how -->
-  <section class="scene" id="s4">
-    <div class="tag">HOW I USE IT</div>
-    <div class="h2" style="font-size:84px;margin-bottom:40px">使い方はシンプル</div>
-    <div class="chat">
-      <div class="bub me"><div class="who">わたし</div>荷室は長さ1,800×幅1,200mm。<br>下に収納できる<br>ベッドキットを作りたい！</div>
-      <div class="bub ai"><div class="who">Claude</div>いいですね！<b>脚の高さ・板の分割案・材料リスト</b>をまとめます。まずは…</div>
-      <div class="bub me"><div class="who">わたし</div>じゃあカット図もお願い！</div>
+    <div class="head"><div class="tag">01 / BED KIT</div><div class="h2">ベッドキット</div></div>
+    <canvas class="view" id="cvBed" width="1080" height="1080"></canvas>
+    <div class="label3d" id="lbBed1">1,800 × 1,200 mm</div>
+    <div class="label3d" id="lbBed2">下は収納スペース</div>
+    <div class="pills">
+      <div class="pill">3Dモデルで<b>組み上がり</b>を確認</div>
+      <div class="pill">板は<b>3分割</b>で取り外し</div>
     </div>
   </section>
 
-  <!-- 5: outro -->
-  <section class="scene" id="s5">
-    <div class="h2">アイデアを<br><span class="x">カタチ</span>にする<br>相棒。</div>
-    <div class="sub">「作りたい」を伝えるだけ。<br>あなたも試してみて。</div>
-    <div class="tag" style="margin-top:80px">車いじり × Claude</div>
+  <!-- 2: rod holder model -->
+  <section class="scene" id="s2">
+    <div class="head"><div class="tag">02 / ROD HOLDER</div><div class="h2">ロッドホルダー</div></div>
+    <canvas class="view" id="cvRod" width="1080" height="1080"></canvas>
+    <div class="label3d" id="lbRod1">天井に竿を5本</div>
+    <div class="pills">
+      <div class="pill">車内の<b>天井スペース</b>を活用</div>
+      <div class="pill">取り付け位置を<b>モデルで検討</b></div>
+    </div>
+  </section>
+
+  <!-- 3: seat cover color study -->
+  <section class="scene" id="s3">
+    <div class="head"><div class="tag">03 / SEAT COVER</div><div class="h2">シートカバー</div></div>
+    <svg id="seat" viewBox="0 0 1080 1080">
+      <defs>
+        <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#000" stop-opacity=".35"/>
+          <stop offset=".5" stop-color="#000" stop-opacity="0"/>
+          <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+        </linearGradient>
+      </defs>
+      <rect x="470" y="190" width="22" height="70" fill="#777"/>
+      <rect x="588" y="190" width="22" height="70" fill="#777"/>
+      <rect class="cBase" x="400" y="50" width="280" height="160" rx="60"/>
+      <rect class="cMain" x="440" y="80" width="200" height="100" rx="40"/>
+      <path class="cBase" d="M290 250 Q540 215 790 250 L815 820 Q540 855 265 820 Z"/>
+      <path class="cMain" d="M385 280 Q540 262 695 280 L708 795 Q540 815 372 795 Z"/>
+      <path class="cStitch" fill="none" stroke-width="7" stroke-dasharray="18 12" d="M385 280 Q540 262 695 280 L708 795 Q540 815 372 795 Z"/>
+      <path class="cStitch" fill="none" stroke-width="6" stroke-dasharray="16 12" d="M378 450 Q540 435 700 450 M376 620 Q540 605 704 620"/>
+      <path class="cBase" d="M230 855 Q540 820 850 855 L880 1010 Q540 1055 200 1010 Z"/>
+      <path class="cMain" d="M335 870 Q540 850 745 870 L762 985 Q540 1012 318 985 Z"/>
+      <path class="cStitch" fill="none" stroke-width="7" stroke-dasharray="18 12" d="M335 870 Q540 850 745 870 L762 985 Q540 1012 318 985 Z"/>
+      <path fill="url(#shade)" d="M290 250 Q540 215 790 250 L815 820 Q540 855 265 820 Z"/>
+      <path fill="url(#shade)" d="M230 855 Q540 820 850 855 L880 1010 Q540 1055 200 1010 Z"/>
+    </svg>
+    <div class="swatches" id="swatches"></div>
+    <div id="palName"></div>
+  </section>
+
+  <!-- 4: outro -->
+  <section class="scene center" id="s4">
+    <div class="h2">ぜんぶ、<br><span class="x">Claude</span>と<br>考えて形にした。</div>
+    <div class="chips"><div>ベッドキット</div><div>ロッドホルダー</div><div>シートカバー</div></div>
+    <div class="sub">次は何つくろう？</div>
   </section>
 
   <div class="bar" id="bar"></div>
 </div>
 
 <script>
-  // Scene timeline in seconds: [start, end]
-  const SCENES = [[0, 3.2], [3.2, 7.6], [7.6, 12.0], [12.0, 16.4], [16.4, 21.4], [21.4, 25]];
-  const DURATION = 25;
+  const SCENES = [[0, 2.6], [2.6, 8.6], [8.6, 14.1], [14.1, 20.1], [20.1, 24.5]];
+  const DURATION = 24.5;
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const easeBack = (x) => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
 
+  // ---------- shared three.js helpers (1 unit = 100 mm) ----------
+  function makeView(canvas) {
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setSize(1080, 1080, false);
+    renderer.shadowMap.enabled = true;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+    scene.add(new THREE.HemisphereLight(0xfff4e6, 0x30343f, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(10, 22, 14);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16 });
+    scene.add(sun);
+    return { renderer, scene, camera };
+  }
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0.05, ...o });
+  function box(w, h, d, m) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.castShadow = mesh.receiveShadow = true;
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),
+      new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }));
+    mesh.add(edges);
+    return mesh;
+  }
+  function vanShell(scene, L, W, H) {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W), mat(0x2b2f3a));
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(L, H, W));
+    const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xa9a39a, transparent: true, opacity: 0.45 }));
+    lines.position.y = H / 2; scene.add(lines);
+  }
+  function project(v, camera) {
+    const p = v.clone().project(camera);
+    return { x: (p.x + 1) / 2 * 1080, y: (1 - p.y) / 2 * 1080 + 470 };
+  }
+
+  // ---------- bed kit ----------
+  const bed = makeView(document.getElementById('cvBed'));
+  vanShell(bed.scene, 18, 12, 11);
+  const wood = mat(0xd9ae7e), woodDark = mat(0x9c7148);
+  const legs = [], panels = [], bins = [];
+  for (const x of [-8.2, 0, 8.2]) for (const z of [-5.4, 5.4]) {
+    const l = box(0.5, 3.6, 0.5, woodDark); l.position.set(x, 1.8, z); bed.scene.add(l); legs.push(l);
+  }
+  const rails = [-5.4, 5.4].map(z => { const r = box(17.4, 0.4, 0.6, woodDark); r.position.set(0, 3.8, z); bed.scene.add(r); return r; });
+  for (const x of [-5.9, 0, 5.9]) {
+    const p = box(5.8, 0.24, 11.8, wood); p.position.set(x, 4.12, 0); bed.scene.add(p); panels.push(p);
+  }
+  [[0x6e7356, -5.5], [0x3c4a63, 0], [0x8a5a44, 5.5]].forEach(([c, x]) => {
+    const b = box(4.6, 2.8, 4.8, mat(c)); b.position.set(x, 1.4, 2.6); bed.scene.add(b); bins.push(b);
+  });
+
+  function renderBed(local) {
+    legs.forEach((l, i) => { const p = ease((local - 0.2 - i * 0.06) / 0.5); l.scale.y = Math.max(p, 0.001); l.position.y = 1.8 * p; });
+    rails.forEach((r, i) => { const p = easeBack((local - 0.8 - i * 0.12) / 0.5); r.position.y = 3.8 + (1 - p) * 6; r.visible = local > 0.8; });
+    panels.forEach((pn, i) => { const p = easeBack((local - 1.4 - i * 0.3) / 0.55); pn.position.y = 4.12 + (1 - p) * 8; pn.visible = local > 1.4 + i * 0.3; });
+    bins.forEach((b, i) => { const p = ease((local - 2.6 - i * 0.25) / 0.6); b.position.z = 2.6 + (1 - p) * 14; b.visible = local > 2.6 + i * 0.25; });
+    const a = 0.9 + local * 0.22;
+    bed.camera.position.set(Math.cos(a) * 33, 19, Math.sin(a) * 33);
+    bed.camera.lookAt(0, 2.6, 0);
+    bed.renderer.render(bed.scene, bed.camera);
+    place('lbBed1', project(new THREE.Vector3(0, 4.6, -6), bed.camera), ease((local - 2.2) / 0.4));
+    place('lbBed2', project(new THREE.Vector3(0, 1.5, 7.5), bed.camera), ease((local - 3.6) / 0.4));
+  }
+
+  // ---------- rod holder ----------
+  const rod = makeView(document.getElementById('cvRod'));
+  vanShell(rod.scene, 18, 12, 11);
+  const seatM = mat(0x3a3f4d);
+  [-3, 3].forEach(z => {
+    const s = box(3.6, 1, 3.8, seatM); s.position.set(-6.5, 2.4, z); rod.scene.add(s);
+    const bk = box(0.9, 3.6, 3.8, seatM); bk.position.set(-8.2, 4.4, z); rod.scene.add(bk);
+  });
+  const barM = mat(0xd97757, { metalness: 0.4, roughness: 0.4 });
+  const bars = [-4.5, 4.5].map(x => {
+    const g = new THREE.Group();
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 11.2, 20), barM);
+    c.rotation.x = Math.PI / 2; c.castShadow = true; g.add(c);
+    [-5.4, 5.4].forEach(z => { const h = box(0.4, 1.2, 0.4, mat(0x555a66)); h.position.set(0, 0.6, z); g.add(h); });
+    g.position.set(x, 9.6, 0); rod.scene.add(g); return g;
+  });
+  const rodColors = [0xf2c14e, 0xf5f1ea, 0x5fa8d3, 0xe85d5d, 0x8fd18b];
+  const rods = rodColors.map((c, i) => {
+    const g = new THREE.Group();
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 17, 12), mat(c, { roughness: 0.35 }));
+    r.rotation.z = Math.PI / 2; r.castShadow = true; g.add(r);
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 2.4, 12), mat(0x222222));
+    grip.rotation.z = Math.PI / 2; grip.position.x = -6.5; g.add(grip);
+    const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.5, 20), mat(0x9aa0a6, { metalness: 0.6, roughness: 0.3 }));
+    reel.position.set(-5.6, -0.45, 0); g.add(reel);
+    g.position.set(0, 9.85, -3.6 + i * 1.8); rod.scene.add(g); return g;
+  });
+
+  function renderRod(local) {
+    bars.forEach((b, i) => { const p = easeBack((local - 0.2 - i * 0.2) / 0.5); b.position.y = 9.6 - (1 - p) * 5; b.visible = local > 0.2 + i * 0.2; });
+    rods.forEach((r, i) => { const p = ease((local - 1.0 - i * 0.35) / 0.7); r.position.x = (1 - p) * 26; r.visible = local > 1.0 + i * 0.35; });
+    const a = 0.75 + local * 0.14;
+    rod.camera.position.set(Math.cos(a) * 30, 16 - local * 0.5, Math.sin(a) * 30);
+    rod.camera.lookAt(0, 6.5, 0);
+    rod.renderer.render(rod.scene, rod.camera);
+    place('lbRod1', project(new THREE.Vector3(2, 11.6, 0), rod.camera), ease((local - 3.0) / 0.4));
+  }
+
+  function place(id, pos, o) {
+    const el = document.getElementById(id);
+    el.style.opacity = o;
+    el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
+    el.style.transform = `translate(-50%, -50%) scale(${0.85 + 0.15 * o})`;
+  }
+
+  // ---------- seat cover palettes ----------
+  const PALETTES = [
+    { name: 'ブラック × レッドステッチ', base: '#1d1e22', main: '#34353b', stitch: '#e0483e' },
+    { name: 'キャメル × ブラウン', base: '#5a3c27', main: '#c08a5a', stitch: '#f3dfbf' },
+    { name: 'カーキ × ブラック', base: '#26271f', main: '#6e7356', stitch: '#e8d9a6' },
+    { name: 'デニム × ホワイト', base: '#22314b', main: '#4a6a96', stitch: '#f5f1ea' },
+  ];
+  const swWrap = document.getElementById('swatches');
+  PALETTES.forEach(p => {
+    const d = document.createElement('div'); d.className = 'sw';
+    d.innerHTML = `<div class="chip"><span style="background:${p.main}"></span><span style="background:${p.base}"></span><span style="background:${p.stitch}"></span></div><div class="nm">${p.name.replace(' × ', '<br>× ')}</div>`;
+    swWrap.appendChild(d);
+  });
+  const hex = (h) => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+  const mix = (a, b, k) => 'rgb(' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * k)).join(',') + ')';
+
+  function renderSeat(local) {
+    const step = 1.35, idx = clamp(Math.floor((local - 0.5) / step), 0, PALETTES.length - 1);
+    const k = idx === 0 ? 1 : ease((local - 0.5 - idx * step) / 0.35);
+    const cur = PALETTES[idx], prev = PALETTES[Math.max(0, idx - 1)];
+    const paint = (cls, key) => document.querySelectorAll('.' + cls).forEach(e => {
+      const c = mix(prev[key], cur[key], k);
+      e.setAttribute(cls === 'cStitch' ? 'stroke' : 'fill', c);
+    });
+    paint('cBase', 'base'); paint('cMain', 'main'); paint('cStitch', 'stitch');
+    document.querySelectorAll('.sw').forEach((s, i) => {
+      const appear = ease((local - 0.3 - i * 0.1) / 0.3);
+      s.classList.toggle('on', i === idx);
+      s.style.opacity = (i === idx ? 1 : 0.45) * appear;
+      s.style.transform = `translateY(${(1 - appear) * 30}px) scale(${i === idx ? 1.08 : 1})`;
+    });
+    const nm = document.getElementById('palName');
+    nm.textContent = cur.name;
+    nm.style.opacity = idx === 0 ? ease((local - 0.5) / 0.3) : 1;
+  }
+
+  // ---------- timeline ----------
   function render(t) {
     SCENES.forEach(([a, b], i) => {
       const el = document.getElementById('s' + i);
-      const local = t - a;
+      const local = t - a, last = i === SCENES.length - 1;
       const fadeIn = ease(local / 0.4);
-      const fadeOut = i === SCENES.length - 1 ? 1 : 1 - ease((t - (b - 0.3)) / 0.3);
-      const visible = t >= a && t < b + (i === SCENES.length - 1 ? 1 : 0);
+      const fadeOut = last ? 1 : 1 - ease((t - (b - 0.3)) / 0.3);
+      const visible = t >= a && (t < b || last);
       el.style.opacity = visible ? Math.min(fadeIn, fadeOut) : 0;
-      el.style.transform = `translateY(${(1 - fadeIn) * 60}px) scale(${1 + local * 0.006})`;
-
-      el.querySelectorAll('.draw').forEach((p, k) => {
-        p.style.strokeDasharray = 1;
-        p.style.strokeDashoffset = 1 - ease((local - 0.3 - k * 0.15) / 0.8);
+      el.querySelectorAll('.head, .center > *').forEach(h => h.style.transform = `translateY(${(1 - fadeIn) * 50}px)`);
+      el.querySelectorAll('.pill').forEach((p, k) => {
+        const o = ease((local - 1.6 - k * 0.5) / 0.35);
+        p.style.opacity = o; p.style.transform = `translateY(${(1 - o) * 30}px)`;
       });
-      el.querySelectorAll('.fade').forEach((p) => { p.style.opacity = ease((local - 1.2) / 0.4); });
-      el.querySelectorAll('.pts li').forEach((li, k) => {
-        const p = ease((local - 1.0 - k * 0.45) / 0.35);
-        li.style.opacity = p;
-        li.style.transform = `translateX(${(1 - p) * -40}px)`;
-      });
-      el.querySelectorAll('.bub').forEach((bub, k) => {
-        const p = ease((local - 0.6 - k * 1.3) / 0.35);
-        bub.style.opacity = p;
-        bub.style.transform = `translateY(${(1 - p) * 40}px)`;
-      });
+      if (!visible) return;
+      if (i === 1) renderBed(local);
+      if (i === 2) renderRod(local);
+      if (i === 3) renderSeat(local);
     });
     document.getElementById('bar').style.width = (clamp(t / DURATION) * 1080) + 'px';
   }
@@ -177,7 +299,6 @@
   window.render = render;
   render(0);
 
-  // Live preview when opened normally in a browser
   if (!navigator.webdriver) {
     const t0 = performance.now();
     (function loop() { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();

@@ -10,7 +10,7 @@ const out = process.argv[2] || path.join(__dirname, 'car-x-claude.mp4');
 const framesDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'frames-'));
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.goto('file://' + path.join(__dirname, 'index.html'), { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
